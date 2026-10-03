@@ -1,0 +1,153 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Usuario {
+  id            String         @id @db.Uuid
+  email         String         @unique @db.VarChar(320)
+  nombre        String?        @db.VarChar(120)
+  creadoEn      DateTime       @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime       @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  categorias    Categoria[]
+  ingresos      Ingreso[]
+  gastos        Gasto[]
+  metasAhorro   MetaAhorro[]
+  aportesAhorro AporteAhorro[]
+  inversiones   Inversion[]
+
+  @@map("usuarios")
+}
+
+model Categoria {
+  id            String     @id @default(uuid()) @db.Uuid
+  usuarioId     String     @map("usuario_id") @db.Uuid
+  nombre        String     @db.VarChar(80)
+  color         String?    @db.VarChar(20)
+  creadoEn      DateTime   @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime   @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  usuario       Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  ingresos      Ingreso[]
+  gastos        Gasto[]
+
+  @@unique([usuarioId, nombre])
+  @@unique([usuarioId, id])
+  @@index([usuarioId])
+  @@map("categorias")
+}
+
+model Ingreso {
+  id            String    @id @default(uuid()) @db.Uuid
+  usuarioId     String    @map("usuario_id") @db.Uuid
+  categoriaId   String    @map("categoria_id") @db.Uuid
+  monto         Decimal   @db.Decimal(14, 2)
+  descripcion   String?   @db.VarChar(500)
+  ocurridoEn    DateTime  @default(now()) @map("ocurrido_en") @db.Timestamptz(6)
+  creadoEn      DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime  @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  usuario       Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  categoria     Categoria @relation(fields: [usuarioId, categoriaId], references: [usuarioId, id], onDelete: Restrict)
+
+  @@index([usuarioId, ocurridoEn])
+  @@index([categoriaId])
+  @@map("ingresos")
+}
+
+model Gasto {
+  id            String    @id @default(uuid()) @db.Uuid
+  usuarioId     String    @map("usuario_id") @db.Uuid
+  categoriaId   String    @map("categoria_id") @db.Uuid
+  monto         Decimal   @db.Decimal(14, 2)
+  descripcion   String?   @db.VarChar(500)
+  ocurridoEn    DateTime  @default(now()) @map("ocurrido_en") @db.Timestamptz(6)
+  creadoEn      DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime  @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  usuario       Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  categoria     Categoria @relation(fields: [usuarioId, categoriaId], references: [usuarioId, id], onDelete: Restrict)
+
+  @@index([usuarioId, ocurridoEn])
+  @@index([categoriaId])
+  @@map("gastos")
+}
+
+model MetaAhorro {
+  id            String         @id @default(uuid()) @db.Uuid
+  usuarioId     String         @map("usuario_id") @db.Uuid
+  nombre        String         @db.VarChar(120)
+  descripcion   String?        @db.VarChar(500)
+  montoObjetivo Decimal        @map("monto_objetivo") @db.Decimal(14, 2)
+  fechaObjetivo DateTime?      @map("fecha_objetivo") @db.Date
+  estado        EstadoMeta     @default(ACTIVA)
+  creadoEn      DateTime       @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime       @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  usuario       Usuario        @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  aportes       AporteAhorro[]
+
+  @@unique([usuarioId, id])
+  @@index([usuarioId, estado])
+  @@map("metas_ahorro")
+}
+
+model AporteAhorro {
+  id          String     @id @default(uuid()) @db.Uuid
+  usuarioId   String     @map("usuario_id") @db.Uuid
+  metaId      String     @map("meta_id") @db.Uuid
+  monto       Decimal    @db.Decimal(14, 2)
+  descripcion String?    @db.VarChar(500)
+  ocurridoEn  DateTime   @default(now()) @map("ocurrido_en") @db.Timestamptz(6)
+  creadoEn    DateTime   @default(now()) @map("creado_en") @db.Timestamptz(6)
+  meta        MetaAhorro @relation(fields: [usuarioId, metaId], references: [usuarioId, id], onDelete: Cascade)
+  usuario     Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, metaId, ocurridoEn])
+  @@map("aportes_ahorro")
+}
+
+model Inversion {
+  id             String          @id @default(uuid()) @db.Uuid
+  usuarioId      String          @map("usuario_id") @db.Uuid
+  nombre         String          @db.VarChar(120)
+  tipo           TipoInversion
+  montoInvertido Decimal         @map("monto_invertido") @db.Decimal(14, 2)
+  valorActual    Decimal         @map("valor_actual") @db.Decimal(14, 2)
+  estado         EstadoInversion @default(ACTIVA)
+  fechaInicio    DateTime        @default(now()) @map("fecha_inicio") @db.Date
+  fechaCierre    DateTime?       @map("fecha_cierre") @db.Date
+  descripcion    String?         @db.VarChar(500)
+  creadoEn      DateTime        @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime        @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  usuario       Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, estado])
+  @@map("inversiones")
+}
+
+enum EstadoMeta {
+  ACTIVA
+  CUMPLIDA
+  CANCELADA
+
+  @@map("estado_meta")
+}
+
+enum TipoInversion {
+  ACCIONES
+  BONOS
+  FONDOS
+  CRIPTOMONEDAS
+  INMUEBLES
+  OTRO
+
+  @@map("tipo_inversion")
+}
+
+enum EstadoInversion {
+  ACTIVA
+  CERRADA
+  PAUSADA
+
+  @@map("estado_inversion")
+}
