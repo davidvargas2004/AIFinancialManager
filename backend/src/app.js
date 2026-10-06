@@ -8,7 +8,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.json({ message: "API de AI Financial Manager funcionando" });
+  res.json({ message: "API de AI Financial Manager funcionando estoy listo para trabajar" });
 });
 
 app.use(errorMiddleware);
