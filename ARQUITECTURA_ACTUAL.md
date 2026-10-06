@@ -121,9 +121,19 @@ El servicio usa `usuarioId` para restringir las operaciones de actualización y 
 
 ### 4.3 Estado de integración del módulo
 
-El router de ingresos está definido, pero `backend/src/app.js` no lo registra mediante `app.use(...)`. Por ello, en el estado actual las rutas de ingresos no quedan expuestas por Express.
+Los routers de los módulos financieros están registrados en `backend/src/app.js` bajo `/api`:
 
-Además, el controlador llama a `service.listarIngresos(...)`, pero esa función no está implementada en `ingreso.service.js`. Aunque se conectara el router, la operación `GET` produciría un error en tiempo de ejecución.
+- `/api/categorias`
+- `/api/ingresos`
+- `/api/gastos`
+- `/api/metas-ahorro`
+- `/api/aportes-ahorro`
+- `/api/inversiones`
+- `/api/movimientos`
+
+Todos ofrecen `POST`, `GET`, `GET /:id`, `PUT /:id` y `DELETE /:id`. Las operaciones se restringen al usuario identificado por `req.usuarioId` o por el encabezado `X-User-Id`. Mientras se integra la verificación JWT de Supabase, el middleware rechaza las solicitudes sin un UUID de usuario con `401`.
+
+`/api/movimientos` funciona como una fachada unificada sobre ingresos y gastos. Devuelve ambos tipos con el campo `tipo` y admite los filtros `tipo`, `desde` y `hasta`. La escritura continúa delegándose a los módulos de cada entidad, que persisten mediante Prisma en la base de datos de Supabase.
 
 ## 5. Frontend
 
