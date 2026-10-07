@@ -1,5 +1,5 @@
-const app = require("./app");
 const env = require("./config/env");
+const app = require("./app");
 const prisma = require("./config/prisma");
 
 const server = app.listen(env.port, () => {
@@ -16,4 +16,3 @@ async function shutdown(signal) {
 
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
-

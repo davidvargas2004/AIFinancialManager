@@ -1,4 +1,4 @@
-const { createCrudService } = require("../../src/utils/crud-resource");
+const { createCrudService } = require("../../utils/crud-resource");
 
 module.exports = createCrudService(
   "aporteAhorro",

@@ -1,6 +1,6 @@
 require("dotenv").config();
 
-const requiredVariables = ["DATABASE_URL", "DIRECT_URL"];
+const requiredVariables = ["DATABASE_URL", "DIRECT_URL", "SUPABASE_URL", "SUPABASE_SECRET_KEY"];
 
 for (const variable of requiredVariables) {
   if (!process.env[variable]) {
@@ -10,4 +10,6 @@ for (const variable of requiredVariables) {
 
 module.exports = {
   port: Number(process.env.PORT || 4000),
+  supabaseUrl: process.env.SUPABASE_URL,
+  supabaseAnonKey: process.env.SUPABASE_SECRET_KEY,
 };

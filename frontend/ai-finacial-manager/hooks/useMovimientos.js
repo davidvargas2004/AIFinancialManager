@@ -1,7 +1,6 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
-const API_URL = import.meta.env.VITE_API_URL
-const USER_ID = import.meta.env.VITE_USER_ID
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 const demoMovimientos = [
   {
@@ -39,14 +38,28 @@ export default function useMovimientos() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  useEffect(() => {
+    const token = localStorage.getItem('supabase_access_token')
+    if (!API_URL || !token) return
+    fetch(`${API_URL}/api/movimientos`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error('No fue posible cargar tus movimientos')
+        return response.json()
+      })
+      .then((items) => setMovimientos(items.map((item) => normalizeMovement(item, item.tipo))))
+      .catch((requestError) => setError(requestError.message))
+  }, [])
+
   const request = useCallback(async (tipo, options = {}) => {
-    if (!API_URL || !USER_ID) return null
+    if (!localStorage.getItem('supabase_access_token')) return null
 
     const response = await fetch(`${API_URL}/api/${tipo === 'ingreso' ? 'ingresos' : 'gastos'}${options.id ? `/${options.id}` : ''}`, {
       method: options.method || 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'X-User-Id': USER_ID,
+        Authorization: `Bearer ${localStorage.getItem('supabase_access_token') || ''}`,
       },
       body: options.body ? JSON.stringify(options.body) : undefined,
     })
@@ -80,7 +93,7 @@ export default function useMovimientos() {
       })
       setMovimientos((current) => [normalizeMovement(remote || movement, form.tipo), ...current])
     } catch (requestError) {
-      if (API_URL && USER_ID) setError(requestError.message)
+      if (localStorage.getItem('supabase_access_token')) setError(requestError.message)
       else setMovimientos((current) => [movement, ...current])
     } finally {
       setLoading(false)
@@ -93,7 +106,7 @@ export default function useMovimientos() {
       await request(movement.tipo, { method: 'DELETE', id: movement.id })
       setMovimientos((current) => current.filter((item) => item.id !== movement.id))
     } catch (requestError) {
-      if (API_URL && USER_ID) {
+      if (localStorage.getItem('supabase_access_token')) {
         setError(requestError.message)
         return
       }

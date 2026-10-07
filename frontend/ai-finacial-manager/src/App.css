@@ -104,6 +104,14 @@ input:focus, select:focus { border-color: #9bcf58; box-shadow: 0 0 0 3px rgba(18
 .icon-button { border: 0; color: #aab3ae; background: transparent; font-size: 20px; line-height: 1; }
 .empty-state { padding: 25px 10px; color: var(--muted); text-align: center; font-size: 12px; }
 .form-error { margin: -5px 0 13px; color: #cf6547; font-size: 11px; }
+.form-notice { margin: -5px 0 13px; color: #56832c; font-size: 11px; }
+.auth-shell { display: grid; place-items: center; min-height: 100vh; padding: 22px; background: radial-gradient(circle at 80% 10%, #e8f8cd, transparent 32%), #f5f7f4; }
+.auth-card { width: min(100%, 430px); padding: clamp(28px, 7vw, 52px); border: 1px solid var(--line); border-radius: 28px; background: rgba(255,255,255,.94); box-shadow: var(--shadow); }
+.auth-card .brand-mark { margin-bottom: 22px; }
+.auth-card h1 { max-width: 330px; margin: 13px 0 10px; font-size: clamp(31px, 7vw, 46px); line-height: .98; }
+.auth-copy { margin-bottom: 27px; color: var(--muted); font-size: 13px; }
+.auth-form label { margin-bottom: 17px; }
+.auth-switch { display: block; width: 100%; margin-top: 20px; padding: 6px; border: 0; color: #5f7f39; background: transparent; font-size: 12px; font-weight: 700; }
 .charts-grid { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 18px; }
 .chart-card { min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: #fbfcfb; }
 .chart-card h3 { margin: 0; color: var(--ink); font-size: 13px; }

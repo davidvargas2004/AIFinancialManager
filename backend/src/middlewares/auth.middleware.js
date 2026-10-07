@@ -1,16 +1,22 @@
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const authService = require("../auth/authService");
 
-function requireUser(req, res, next) {
-  const usuarioId = req.usuarioId || req.get("x-user-id");
+async function requireUser(req, res, next) {
+  const authorization = req.get("authorization");
+  const match = authorization?.match(/^Bearer\s+(.+)$/i);
 
-  if (!usuarioId || !UUID_PATTERN.test(usuarioId)) {
+  if (!match) {
     return res.status(401).json({
-      message: "Se requiere un usuario autenticado mediante el encabezado X-User-Id",
+      message: "Se requiere un token Supabase Bearer",
     });
   }
 
-  req.usuarioId = usuarioId;
-  next();
+  try {
+    req.usuario = await authService.obtenerUsuarioPorToken(match[1]);
+    req.usuarioId = req.usuario.id;
+    next();
+  } catch (error) {
+    next(error);
+  }
 }
 
 module.exports = requireUser;

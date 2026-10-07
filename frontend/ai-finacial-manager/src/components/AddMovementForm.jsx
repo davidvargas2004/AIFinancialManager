@@ -19,7 +19,7 @@ function AddMovementForm({onAddMovement}) {
   async function handleSubmit(e) {
     e.preventDefault();
     const endpoint = form.tipo === 'ingreso' ? 'ingresos' :'gastos';
-    const res = await fetch(`http://localhost:4000/${endpoint}`,
+    const res = await fetch(`/api/${endpoint}`,
         {   method: 'POST', 
             headers: {'Content-Type': 'application/json'}, 
             body: JSON.stringify(form)});
@@ -59,6 +59,5 @@ export default AddMovementForm;
 
 
     
-
 
 

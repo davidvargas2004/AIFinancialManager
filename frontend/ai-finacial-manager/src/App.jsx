@@ -3,6 +3,7 @@ import './App.css'
 import useMovimientos from '../hooks/useMovimientos'
 import MovementList from './components/MovementList'
 import CreadorChart from './components/CreadorChart'
+import AuthPage from './components/AuthPage'
 
 const categories = [
   { id: 'demo-work', label: 'Trabajo', icon: '◈' },
@@ -21,9 +22,17 @@ const initialForm = {
 }
 
 function App() {
+  const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('finance_user') || 'null'))
   const { movimientos, resumen, loading, error, agregarMovimiento, eliminarMovimiento } = useMovimientos()
   const [form, setForm] = useState(initialForm)
   const [filter, setFilter] = useState('todos')
+
+  if (!user) {
+    return <AuthPage onAuthenticated={(authenticatedUser) => {
+      localStorage.setItem('finance_user', JSON.stringify(authenticatedUser))
+      setUser(authenticatedUser)
+    }} />
+  }
 
   const visibleMovimientos = filter === 'todos'
     ? movimientos
@@ -54,7 +63,11 @@ function App() {
           <p className="eyebrow">PERSONAL FINANCE</p>
           <h1>Mi dinero<span>.</span></h1>
         </div>
-        <button className="avatar" type="button" aria-label="Perfil">JD</button>
+        <button className="avatar" type="button" aria-label="Cerrar sesión" onClick={() => {
+          localStorage.removeItem('supabase_access_token')
+          localStorage.removeItem('finance_user')
+          setUser(null)
+        }}>{user.nombre?.slice(0, 2).toUpperCase() || user.email.slice(0, 2).toUpperCase()}</button>
       </header>
 
       <section className="balance-card">
