@@ -2,6 +2,7 @@ import { useState } from 'react'
 import './App.css'
 import useMovimientos from '../hooks/useMovimientos'
 import MovementList from './components/MovementList'
+import CreadorChart from './components/CreadorChart'
 
 const categories = [
   { id: 'demo-work', label: 'Trabajo', icon: '◈' },
@@ -119,6 +120,8 @@ function App() {
           <MovementList movimientos={visibleMovimientos} onDelete={eliminarMovimiento} />
         </div>
       </section>
+
+      <CreadorChart movimientos={movimientos} />
     </main>
   )
 }
