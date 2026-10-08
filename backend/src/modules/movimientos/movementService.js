@@ -57,9 +57,10 @@ async function listarMovimientos(usuarioId, filters = {}) {
 
   const movimientos = await Promise.all(
     tipos.map(async (tipo) => {
-      const items = await getService(tipo).listarIngresos
-        ? getService(tipo).listarIngresos(usuarioId, dateFilter)
-        : getService(tipo).listar(usuarioId, dateFilter);
+      const service = getService(tipo);
+      const items = service.listarIngresos
+        ? await service.listarIngresos(usuarioId, dateFilter)
+        : await service.listar(usuarioId, dateFilter);
       return items.map((item) => normalizeMovement(item, tipo));
     }),
   );

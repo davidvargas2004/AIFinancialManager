@@ -2,33 +2,42 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
   Legend,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts'
 
-const COLORS = ['#244b35', '#8fbd4d', '#ef8865', '#5c8d9e', '#b98a44', '#8f6bb3', '#d15f87']
+const CHART_TEXT_COLOR = '#53615c'
 
 function getCategory(movement) {
   return movement.categoria?.nombre || movement.categoria || 'Sin categoría'
 }
 
-function buildChartData(movimientos) {
-  return movimientos.reduce((categories, movement) => {
-    const name = getCategory(movement)
-    const current = categories.get(name) || { name, ingresos: 0, gastos: 0 }
-    const amount = Number(movement.monto) || 0
+function buildCurrentMonthData(movimientos, categorias) {
+  const currentDate = new Date()
+  const currentMonth = currentDate.getMonth()
+  const currentYear = currentDate.getFullYear()
+  const categoryNames = [...new Set([
+    ...categorias.map(({ nombre }) => nombre),
+    ...movimientos.map(getCategory).filter((name) => name !== 'Sin categoría'),
+  ])]
 
-    if (movement.tipo === 'ingreso') current.ingresos += amount
-    if (movement.tipo === 'gasto') current.gastos += amount
-    categories.set(name, current)
-    return categories
-  }, new Map())
+  const data = categoryNames.map((name) => ({ name, ingresos: 0, gastos: 0 }))
+  movimientos.forEach((movement) => {
+    const date = new Date(movement.fecha || movement.ocurridoEn)
+    if (date.getMonth() !== currentMonth || date.getFullYear() !== currentYear) return
+
+    const row = data.find(({ name }) => name === getCategory(movement))
+    if (!row) return
+    row[movement.tipo === 'ingreso' ? 'ingresos' : 'gastos'] += Number(movement.monto) || 0
+  })
+
+  return {
+    data,
+    month: currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }),
+  }
 }
 
 function currency(value) {
@@ -53,11 +62,9 @@ function ChartTooltip({ active, payload, label }) {
   )
 }
 
-function CreadorChart({ movimientos = [] }) {
-  const groupedData = [...buildChartData(movimientos).values()]
-  const expenseData = groupedData
-    .filter(({ gastos }) => gastos > 0)
-    .map(({ name, gastos }) => ({ name, value: gastos }))
+function CreadorChart({ movimientos = [], categorias = [] }) {
+  const currentMonth = buildCurrentMonthData(movimientos, categorias)
+  const hasMovements = movimientos.length > 0
 
   return (
     <section className="charts-panel" aria-label="Gráficas de movimientos">
@@ -69,54 +76,42 @@ function CreadorChart({ movimientos = [] }) {
         <span className="sparkle">◒</span>
       </div>
 
-      {groupedData.length === 0 ? (
+      {!hasMovements ? (
         <p className="empty-state">Agrega movimientos para ver tus gráficas.</p>
       ) : (
-        <div className="charts-grid">
-          <div className="chart-card">
-            <h3>Gastos por categoría</h3>
-            <div className="chart-container">
-              {expenseData.length > 0 ? (
+        <div className="chart-card monthly-chart-card">
+          <div className="chart-title-row">
+            <div>
+              <h3>Actividad del mes vigente</h3>
+              <p className="chart-description">Ingresos y gastos por categoría · {currentMonth.month}</p>
+            </div>
+            <strong className="chart-total">{currency(currentMonth.data.reduce((total, { ingresos, gastos }) => total + ingresos - gastos, 0))}</strong>
+          </div>
+          <div className="monthly-chart-scroll">
+            {currentMonth.data.length > 0 ? (
+              <div className="monthly-chart-container current-month-chart">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={expenseData}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius="55%"
-                      outerRadius="78%"
-                      paddingAngle={3}
-                    >
-                      {expenseData.map((entry, index) => (
-                        <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<ChartTooltip />} />
-                    <Legend />
-                  </PieChart>
+                  <BarChart data={currentMonth.data} margin={{ top: 12, right: 14, left: 0, bottom: 8 }}>
+                    <defs>
+                      <pattern id="monthly-pattern-dots" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
+                        <circle cx="2" cy="2" r="1" fill="#53615c" fillOpacity=".13" />
+                      </pattern>
+                    </defs>
+                    <rect x="0" y="0" width="100%" height="88%" fill="url(#monthly-pattern-dots)" />
+                    <CartesianGrid stroke="#dfe8e1" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fill: CHART_TEXT_COLOR, fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} tickMargin={10} />
+                    <YAxis tick={{ fill: CHART_TEXT_COLOR, fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} width={48} tickFormatter={(value) => `$${value >= 1000 ? `${Math.round(value / 1000)}k` : value}`} />
+                    <Tooltip content={<ChartTooltip />} cursor={false} />
+                    <Legend wrapperStyle={{ color: CHART_TEXT_COLOR, fontSize: 11, fontWeight: 700, paddingTop: 8 }} />
+                    <Bar dataKey="ingresos" name="Ingresos" fill="#8fbd4d" radius={[5, 5, 0, 0]} />
+                    <Bar dataKey="gastos" name="Gastos" fill="#ef8865" radius={[5, 5, 0, 0]} />
+                  </BarChart>
                 </ResponsiveContainer>
-              ) : (
-                <p className="empty-state">Todavía no hay gastos registrados.</p>
-              )}
+              </div>
+            ) : (
+              <p className="empty-state">No hay categorías configuradas.</p>
+            )}
             </div>
-          </div>
-
-          <div className="chart-card">
-            <h3>Ingresos y gastos</h3>
-            <div className="chart-container">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={groupedData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
-                  <CartesianGrid stroke="#e6ebe7" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fill: '#8a9490', fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: '#8a9490', fontSize: 10 }} axisLine={false} tickLine={false} width={42} />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Legend />
-                  <Bar dataKey="ingresos" name="Ingresos" fill="#8fbd4d" radius={[5, 5, 0, 0]} />
-                  <Bar dataKey="gastos" name="Gastos" fill="#ef8865" radius={[5, 5, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
         </div>
       )}
     </section>

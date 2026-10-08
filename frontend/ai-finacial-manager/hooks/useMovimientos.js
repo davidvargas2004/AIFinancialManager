@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import useAuthUsuario from './useAuthUsuario'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
@@ -34,15 +35,18 @@ function normalizeMovement(item, tipo) {
 }
 
 export default function useMovimientos() {
+  const { token } = useAuthUsuario()
   const [movimientos, setMovimientos] = useState(demoMovimientos)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    const token = localStorage.getItem('supabase_access_token')
-    if (!API_URL || !token) return
+    if (!token) return
+
     fetch(`${API_URL}/api/movimientos`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     })
       .then((response) => {
         if (!response.ok) throw new Error('No fue posible cargar tus movimientos')
@@ -50,23 +54,30 @@ export default function useMovimientos() {
       })
       .then((items) => setMovimientos(items.map((item) => normalizeMovement(item, item.tipo))))
       .catch((requestError) => setError(requestError.message))
-  }, [])
+  }, [token])
 
   const request = useCallback(async (tipo, options = {}) => {
-    if (!localStorage.getItem('supabase_access_token')) return null
+    if (!token) return null
 
-    const response = await fetch(`${API_URL}/api/${tipo === 'ingreso' ? 'ingresos' : 'gastos'}${options.id ? `/${options.id}` : ''}`, {
-      method: options.method || 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('supabase_access_token') || ''}`,
+    const response = await fetch(
+      `${API_URL}/api/${tipo === 'ingreso' ? 'ingresos' : 'gastos'}${options.id ? `/${options.id}` : ''}`,
+      {
+        method: options.method || 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: options.body ? JSON.stringify(options.body) : undefined,
       },
-      body: options.body ? JSON.stringify(options.body) : undefined,
-    })
+    )
 
-    if (!response.ok) throw new Error('No fue posible sincronizar el movimiento')
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      throw new Error(data.message || data.error || 'No fue posible sincronizar el movimiento')
+    }
+
     return response.status === 204 ? null : response.json()
-  }, [])
+  }, [token])
 
   const agregarMovimiento = useCallback(async (form) => {
     const movement = {
@@ -85,6 +96,7 @@ export default function useMovimientos() {
       const remote = await request(form.tipo, {
         method: 'POST',
         body: {
+          tipo: form.tipo,
           categoriaId: form.categoriaId,
           monto: form.monto,
           descripcion: form.descripcion.trim(),
@@ -93,8 +105,7 @@ export default function useMovimientos() {
       })
       setMovimientos((current) => [normalizeMovement(remote || movement, form.tipo), ...current])
     } catch (requestError) {
-      if (localStorage.getItem('supabase_access_token')) setError(requestError.message)
-      else setMovimientos((current) => [movement, ...current])
+      setError(requestError.message)
     } finally {
       setLoading(false)
     }
@@ -106,11 +117,7 @@ export default function useMovimientos() {
       await request(movement.tipo, { method: 'DELETE', id: movement.id })
       setMovimientos((current) => current.filter((item) => item.id !== movement.id))
     } catch (requestError) {
-      if (localStorage.getItem('supabase_access_token')) {
-        setError(requestError.message)
-        return
-      }
-      setMovimientos((current) => current.filter((item) => item.id !== movement.id))
+      setError(requestError.message)
     }
   }, [request])
 

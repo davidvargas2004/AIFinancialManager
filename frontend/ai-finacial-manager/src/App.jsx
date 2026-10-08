@@ -3,36 +3,26 @@ import './App.css'
 import useMovimientos from '../hooks/useMovimientos'
 import MovementList from './components/MovementList'
 import CreadorChart from './components/CreadorChart'
-import AuthPage from './components/AuthPage'
-
-const categories = [
-  { id: 'demo-work', label: 'Trabajo', icon: '◈' },
-  { id: 'demo-food', label: 'Alimentación', icon: '◌' },
-  { id: 'demo-home', label: 'Hogar', icon: '⌂' },
-  { id: 'demo-leisure', label: 'Ocio', icon: '✦' },
-]
+import useAuthUsuario from '../hooks/useAuthUsuario'
+import useCategorias from '../hooks/useCategorias'
+import CategoryPicker from './components/CategoryPicker'
 
 const initialForm = {
   tipo: 'ingreso',
   monto: '',
   descripcion: '',
-  categoriaId: categories[0].id,
-  categoria: categories[0].label,
+  categoriaId: '',
+  categoria: '',
   fecha: new Date().toISOString().slice(0, 10),
 }
 
 function App() {
-  const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('finance_user') || 'null'))
+  const { usuario: user, logout } = useAuthUsuario()
   const { movimientos, resumen, loading, error, agregarMovimiento, eliminarMovimiento } = useMovimientos()
+  const { categorias, loading: loadingCategorias, error: categoriasError } = useCategorias()
   const [form, setForm] = useState(initialForm)
   const [filter, setFilter] = useState('todos')
-
-  if (!user) {
-    return <AuthPage onAuthenticated={(authenticatedUser) => {
-      localStorage.setItem('finance_user', JSON.stringify(authenticatedUser))
-      setUser(authenticatedUser)
-    }} />
-  }
+  const [categoryType, setCategoryType] = useState(form.tipo)
 
   const visibleMovimientos = filter === 'todos'
     ? movimientos
@@ -41,8 +31,8 @@ function App() {
   function updateForm(event) {
     const { name, value } = event.target
     if (name === 'categoriaId') {
-      const category = categories.find(({ id }) => id === value)
-      setForm((current) => ({ ...current, categoriaId: value, categoria: category.label }))
+      const category = categorias.find(({ id }) => id === value)
+      setForm((current) => ({ ...current, categoriaId: value, categoria: category?.nombre || '' }))
       return
     }
     setForm((current) => ({ ...current, [name]: value }))
@@ -50,8 +40,14 @@ function App() {
 
   async function submit(event) {
     event.preventDefault()
-    if (!form.monto || Number(form.monto) <= 0 || !form.descripcion.trim()) return
-    await agregarMovimiento(form)
+    const categoria = categorias.find(({ id }) => id === form.categoriaId) || categorias[0]
+    const movementForm = {
+      ...form,
+      categoriaId: categoria?.id || '',
+      categoria: categoria?.nombre || '',
+    }
+    if (!movementForm.monto || Number(movementForm.monto) <= 0 || !movementForm.descripcion.trim() || !movementForm.categoriaId) return
+    await agregarMovimiento(movementForm)
     setForm((current) => ({ ...initialForm, tipo: current.tipo }))
   }
 
@@ -63,11 +59,9 @@ function App() {
           <p className="eyebrow">PERSONAL FINANCE</p>
           <h1>Mi dinero<span>.</span></h1>
         </div>
-        <button className="avatar" type="button" aria-label="Cerrar sesión" onClick={() => {
-          localStorage.removeItem('supabase_access_token')
-          localStorage.removeItem('finance_user')
-          setUser(null)
-        }}>{user.nombre?.slice(0, 2).toUpperCase() || user.email.slice(0, 2).toUpperCase()}</button>
+        <button className="avatar" type="button" aria-label="Cerrar sesión" onClick={logout}>
+          {user.nombre?.slice(0, 2).toUpperCase() || user.email.slice(0, 2).toUpperCase()}
+        </button>
       </header>
 
       <section className="balance-card">
@@ -93,7 +87,10 @@ function App() {
           <form onSubmit={submit}>
             <div className="segmented-control">
               {['ingreso', 'gasto'].map((type) => (
-                <button key={type} className={form.tipo === type ? 'active' : ''} type="button" onClick={() => setForm((current) => ({ ...current, tipo: type }))}>
+                <button key={type} className={form.tipo === type ? 'active' : ''} type="button" onClick={() => {
+                  setForm((current) => ({ ...current, tipo: type, categoriaId: '', categoria: '' }))
+                  setCategoryType(type)
+                }}>
                   {type === 'ingreso' ? '↗  Ingreso' : '↘  Gasto'}
                 </button>
               ))}
@@ -106,16 +103,24 @@ function App() {
             </label>
             <div className="form-row">
               <label>Categoría
-                <select name="categoriaId" value={form.categoriaId} onChange={updateForm}>
-                  {categories.map((category) => <option key={category.id} value={category.id}>{category.icon} {category.label}</option>)}
-                </select>
+                <CategoryPicker
+                  categories={categorias}
+                  type={categoryType}
+                  value={form.categoriaId}
+                  disabled={loadingCategorias || !categorias.length}
+                  onChange={(category) => setForm((current) => ({
+                    ...current,
+                    categoriaId: category.id,
+                    categoria: category.nombre,
+                  }))}
+                />
               </label>
               <label>Fecha
                 <input name="fecha" type="date" value={form.fecha} onChange={updateForm} required />
               </label>
             </div>
-            {error && <p className="form-error">{error}</p>}
-            <button className={`primary-button ${form.tipo}`} type="submit" disabled={loading}>
+            {(error || categoriasError) && <p className="form-error">{error || categoriasError}</p>}
+            <button className={`primary-button ${form.tipo}`} type="submit" disabled={loading || loadingCategorias || !categorias.length}>
               {loading ? 'Guardando...' : `Guardar ${form.tipo}`}
               <span>→</span>
             </button>
@@ -134,7 +139,7 @@ function App() {
         </div>
       </section>
 
-      <CreadorChart movimientos={movimientos} />
+      <CreadorChart movimientos={movimientos} categorias={categorias} />
     </main>
   )
 }
