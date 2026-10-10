@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import AuthContext from './authContextValue'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
+const API_KEY = import.meta.env.VITE_API_KEY || ''
 const TOKEN_KEY = 'supabase_access_token'
 const USER_KEY = 'finance_user'
 
@@ -21,7 +22,7 @@ export function AuthProvider({ children }) {
   const authenticate = useCallback(async (mode, credentials) => {
     const response = await fetch(`${API_URL}/api/auth/${mode}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY },
       body: JSON.stringify(credentials),
     })
     const data = await response.json().catch(() => ({}))

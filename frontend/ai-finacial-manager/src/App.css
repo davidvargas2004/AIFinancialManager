@@ -70,6 +70,16 @@ h2 { color: var(--ink); font-size: clamp(19px, 3vw, 24px); font-weight: 850; let
 .content-grid { display: grid; grid-template-columns: minmax(300px, .86fr) minmax(340px, 1.14fr); gap: 22px; }
 .form-panel, .history-panel { padding: clamp(22px, 3vw, 30px); border: 1px solid var(--line); border-radius: 23px; background: var(--paper); box-shadow: 0 9px 25px rgba(25,50,32,.035); }
 .charts-panel { margin-top: 22px; padding: clamp(22px, 3vw, 30px); border: 1px solid var(--line); border-radius: 23px; background: var(--paper); box-shadow: 0 9px 25px rgba(25,50,32,.035); }
+.ai-panel { margin-top: 22px; padding: clamp(22px, 3vw, 30px); border: 1px solid var(--line); border-radius: 23px; background: var(--paper); box-shadow: 0 9px 25px rgba(25,50,32,.035); }
+.ai-badge { padding: 8px 11px; border-radius: 10px; color: var(--green-dark); background: var(--green); font-size: 11px; font-weight: 850; }
+.ai-suggestions > p, .ai-status { margin-bottom: 14px; color: var(--muted); font-size: 13px; font-weight: 600; }
+.ai-suggestions > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.ai-suggestions button { padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; color: #557066; background: #fbfcfb; text-align: left; font-size: 11px; }
+.ai-suggestions button:hover { border-color: #b7e17e; background: #f3f9eb; }
+.ai-response { margin-bottom: 18px; padding: 17px; border-radius: 14px; color: var(--ink); background: #f4f8f1; font-size: 13px; font-weight: 600; line-height: 1.65; white-space: pre-wrap; }
+.ai-form { display: flex; gap: 10px; align-items: center; }
+.ai-form input { flex: 1; margin: 0; }
+.ai-form .primary-button { width: auto; margin: 0; white-space: nowrap; }
 .section-heading { justify-content: space-between; margin-bottom: 25px; }
 .sparkle { color: #b9d77f; font-size: 24px; }
 .movement-count { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; color: #557066; background: #f0f5ef; font-size: 12px; font-weight: 800; }
@@ -106,6 +116,7 @@ input:focus, select:focus { border-color: #9bcf58; box-shadow: 0 0 0 3px rgba(18
 .category-check { display: grid; flex: 0 0 19px; place-items: center; width: 19px; height: 19px; margin-left: auto; border-radius: 50%; color: var(--green-dark); background: var(--green); font-size: 11px; font-weight: 900; }
 .category-dot { width: 10px; height: 10px; border-radius: 50%; }
 @keyframes category-modal-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (max-width: 620px) { .ai-form { align-items: stretch; flex-direction: column; } .ai-form .primary-button { width: 100%; } }
 .money-input { position: relative; }
 .money-input span { position: absolute; top: 18px; left: 14px; color: #a4aea9; font-size: 18px; }
 .money-input input { padding-left: 30px; font-size: 19px; font-weight: 700; }

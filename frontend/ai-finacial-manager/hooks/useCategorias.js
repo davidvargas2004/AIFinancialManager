@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import useAuthUsuario from './useAuthUsuario'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
+const API_KEY = import.meta.env.VITE_API_KEY || ''
 
 export default function useCategorias() {
   const { token } = useAuthUsuario()
@@ -13,7 +14,7 @@ export default function useCategorias() {
     if (!token) return
 
     fetch(`${API_URL}/api/categorias`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, 'x-api-key': API_KEY },
     })
       .then(async (response) => {
         const data = await response.json().catch(() => [])

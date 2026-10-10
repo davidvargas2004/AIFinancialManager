@@ -2,26 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import useAuthUsuario from './useAuthUsuario'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
+const API_KEY = import.meta.env.VITE_API_KEY || ''
 
 const demoMovimientos = [
-  {
-    id: 'demo-income',
-    tipo: 'ingreso',
-    monto: 3200,
-    descripcion: 'Salario mensual',
-    categoria: 'Trabajo',
-    categoriaId: 'demo-work',
-    fecha: '2026-10-01',
-  },
-  {
-    id: 'demo-expense',
-    tipo: 'gasto',
-    monto: 86.4,
-    descripcion: 'Compra semanal',
-    categoria: 'Alimentación',
-    categoriaId: 'demo-food',
-    fecha: '2026-10-04',
-  },
+  { id: 'demo-income', tipo: 'ingreso', monto: 3200, descripcion: 'Salario mensual', categoria: 'Trabajo', categoriaId: 'demo-work', fecha: '2026-10-01' },
+  { id: 'demo-expense', tipo: 'gasto', monto: 86.4, descripcion: 'Compra semanal', categoria: 'Alimentación', categoriaId: 'demo-food', fecha: '2026-10-04' },
 ]
 
 function normalizeMovement(item, tipo) {
@@ -44,9 +29,7 @@ export default function useMovimientos() {
     if (!token) return
 
     fetch(`${API_URL}/api/movimientos`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}`, 'x-api-key': API_KEY },
     })
       .then((response) => {
         if (!response.ok) throw new Error('No fue posible cargar tus movimientos')
@@ -66,6 +49,7 @@ export default function useMovimientos() {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
+          'x-api-key': API_KEY,
         },
         body: options.body ? JSON.stringify(options.body) : undefined,
       },
@@ -122,12 +106,8 @@ export default function useMovimientos() {
   }, [request])
 
   const resumen = useMemo(() => {
-    const ingresos = movimientos
-      .filter(({ tipo }) => tipo === 'ingreso')
-      .reduce((total, { monto }) => total + monto, 0)
-    const gastos = movimientos
-      .filter(({ tipo }) => tipo === 'gasto')
-      .reduce((total, { monto }) => total + monto, 0)
+    const ingresos = movimientos.filter(({ tipo }) => tipo === 'ingreso').reduce((total, { monto }) => total + monto, 0)
+    const gastos = movimientos.filter(({ tipo }) => tipo === 'gasto').reduce((total, { monto }) => total + monto, 0)
     return { ingresos, gastos, balance: ingresos - gastos }
   }, [movimientos])
 
