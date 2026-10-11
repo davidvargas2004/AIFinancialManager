@@ -19,12 +19,20 @@ function AItoolspanel() {
     setPregunta("");
   }
 
+  function handleKeyDown(event) {
+    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+      event.preventDefault();
+      event.currentTarget.form?.requestSubmit();
+    }
+  }
+
   return (
     <section className="ai-panel" aria-labelledby="ai-title">
       <div className="section-heading">
-        <div>
+        <div className="ai-heading-copy">
           <p className="eyebrow">ASESOR FINANCIERO</p>
           <h2 id="ai-title">Toma mejores decisiones</h2>
+          <p className="ai-intro">Consulta tus ingresos, gastos y metas con una vista clara de tu dinero.</p>
         </div>
         <span className="ai-badge">✦ IA</span>
       </div>
@@ -40,19 +48,65 @@ function AItoolspanel() {
           </div>
         </div>
       )}
-      {loading && <p className="ai-status">Analizando tus datos financieros...</p>}
+      {loading && (
+        <div className="ai-loading" role="status" aria-live="polite">
+          <span className="ai-spinner" aria-hidden="true" />
+          <div>
+            <strong>Analizando tus datos financieros</strong>
+            <p>Estoy revisando tus movimientos y preparando una recomendación...</p>
+          </div>
+        </div>
+      )}
       {error && <p className="form-error">{error}</p>}
-      {respuesta && !loading && <div className="ai-response">{respuesta}</div>}
+      {respuesta && !loading && (
+        <div className="ai-response-wrap">
+          <div className="ai-response-label"><span>✦</span> Respuesta de tu asesor</div>
+          <div className="ai-response">
+            <p className="ai-greeting">{respuesta.saludo}</p>
+            <p>{respuesta.resumen}</p>
+            {respuesta.registro?.estado === "registrado" && (
+              <div className="ai-recorded">
+                <strong>Movimiento registrado</strong>
+                <span>{respuesta.registro.tipo === "ingreso" ? "Ingreso" : "Gasto"} de ${Number(respuesta.registro.monto).toLocaleString("es-CO", { minimumFractionDigits: 2 })} · {respuesta.registro.categoria}</span>
+              </div>
+            )}
+            {respuesta.observaciones.length > 0 && (
+              <div className="ai-observations">
+                <strong>Observaciones clave</strong>
+                <ul>
+                  {respuesta.observaciones.map((observacion, index) => (
+                    <li key={`${observacion}-${index}`}>{observacion}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div className="ai-recommendation">
+              <strong>Recomendación</strong>
+              <p>{respuesta.recomendacion}</p>
+            </div>
+          </div>
+        </div>
+      )}
       <form className="ai-form" onSubmit={submit}>
-        <input
-          value={pregunta}
-          onChange={(event) => setPregunta(event.target.value)}
-          placeholder="Escribe una pregunta sobre tus finanzas..."
-          maxLength={2000}
-          aria-label="Pregunta para el asesor financiero"
-        />
-        <button className="primary-button" type="submit" disabled={loading || !pregunta.trim()}>
-          {loading ? "Consultando..." : "Consultar"} <span>→</span>
+        <div className="ai-composer">
+          <textarea
+            value={pregunta}
+            onChange={(event) => setPregunta(event.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Escribe aquí tu pregunta...&#10;Por ejemplo: ¿cómo puedo ahorrar más este mes?"
+            maxLength={2000}
+            aria-label="Pregunta para el asesor financiero"
+            rows={4}
+          />
+          <div className="ai-composer-footer">
+            <span>{pregunta.length}/2000 · Ctrl + Enter para enviar</span>
+            <button className="ai-clear" type="button" onClick={() => setPregunta("")} disabled={!pregunta}>
+              Limpiar
+            </button>
+          </div>
+        </div>
+        <button className="primary-button ai-submit" type="submit" disabled={loading || !pregunta.trim()}>
+          <span>{loading ? "Consultando..." : "Consultar al asesor"}</span><b>→</b>
         </button>
       </form>
     </section>

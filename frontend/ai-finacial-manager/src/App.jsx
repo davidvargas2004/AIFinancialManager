@@ -7,6 +7,7 @@ import useAuthUsuario from '../hooks/useAuthUsuario'
 import useCategorias from '../hooks/useCategorias'
 import CategoryPicker from './components/CategoryPicker'
 import AItoolspanel from './components/AItoolspanel'
+import WealthPlanningPanel from './components/WealthPlanningPanel'
 
 const initialForm = {
   tipo: 'ingreso',
@@ -141,6 +142,7 @@ function App() {
       </section>
 
       <CreadorChart movimientos={movimientos} categorias={categorias} />
+      <WealthPlanningPanel />
       <AItoolspanel />
     </main>
   )

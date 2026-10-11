@@ -15,7 +15,11 @@ async function preguntar(req, res, next) {
     }
 
     const respuesta = await service.generarRespuesta(req.usuarioId, pregunta);
-    return res.json({ respuesta });
+    return res.json({
+      respuesta: typeof respuesta === "string"
+        ? { saludo: "Hola, gracias por consultar a tu asesor financiero.", resumen: respuesta, observaciones: [], recomendacion: "Revisa tus movimientos y define tu próximo objetivo financiero.", operacion: { registrar: false } }
+        : respuesta,
+    });
   } catch (error) {
     return next(error);
   }

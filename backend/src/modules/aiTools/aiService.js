@@ -11,6 +11,57 @@ function serialize(value) {
   return value;
 }
 
+function normalizarTexto(value) {
+  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+async function registrarOperacion(usuarioId, respuesta, categorias) {
+  const operacion = respuesta.operacion;
+  if (!operacion?.registrar) return null;
+
+  if (!["ingreso", "gasto"].includes(operacion.tipo)
+    || !Number.isFinite(operacion.monto)
+    || operacion.monto <= 0
+    || operacion.monto > 999999999999
+    || !operacion.descripcion
+    || !operacion.categoria) {
+    return { estado: "pendiente", mensaje: "No registré el movimiento porque faltan datos válidos o una categoría exacta." };
+  }
+
+  const categoria = categorias.find((item) =>
+    normalizarTexto(item.nombre) === normalizarTexto(operacion.categoria));
+  if (!categoria) {
+    return { estado: "pendiente", mensaje: `No registré el movimiento porque no existe la categoría "${operacion.categoria}".` };
+  }
+
+  const ocurridoEn = operacion.ocurridoEn ? new Date(`${operacion.ocurridoEn}T00:00:00.000Z`) : new Date();
+  if (Number.isNaN(ocurridoEn.getTime())) {
+    return { estado: "pendiente", mensaje: "No registré el movimiento porque la fecha no es válida." };
+  }
+
+  const model = operacion.tipo === "ingreso" ? prisma.ingreso : prisma.gasto;
+  const movimiento = await model.create({
+    data: {
+      usuarioId,
+      categoriaId: categoria.id,
+      monto: operacion.monto,
+      descripcion: operacion.descripcion.slice(0, 500),
+      ocurridoEn,
+    },
+    include: { categoria: { select: { nombre: true } } },
+  });
+
+  return {
+    estado: "registrado",
+    tipo: operacion.tipo,
+    id: movimiento.id,
+    monto: Number(movimiento.monto),
+    descripcion: movimiento.descripcion,
+    categoria: movimiento.categoria.nombre,
+    ocurridoEn: movimiento.ocurridoEn.toISOString().slice(0, 10),
+  };
+}
+
 async function generarRespuesta(usuarioId, pregunta) {
   const [usuario, categorias, ingresos, gastos, metasAhorro, aportesAhorro, inversiones] = await Promise.all([
     prisma.usuario.findUnique({
@@ -63,7 +114,20 @@ async function generarRespuesta(usuarioId, pregunta) {
     inversiones,
   });
 
-  return consultarGemini({ pregunta, contexto });
+  const respuesta = await consultarGemini({ pregunta, contexto });
+  const registro = await registrarOperacion(usuarioId, respuesta, categorias);
+  if (registro) {
+    respuesta.registro = registro;
+    if (registro.estado === "registrado") {
+      respuesta.observaciones = [
+        ...respuesta.observaciones,
+        `Movimiento registrado automáticamente: ${registro.tipo} de ${registro.monto.toFixed(2)} en ${registro.categoria}.`,
+      ];
+    } else {
+      respuesta.observaciones = [...respuesta.observaciones, registro.mensaje];
+    }
+  }
+  return respuesta;
 }
 
 module.exports = { generarRespuesta };
