@@ -97,6 +97,23 @@ const RESPONSE_SCHEMA = {
   propertyOrdering: ["saludo", "resumen", "observaciones", "recomendacion", "operacion"],
 };
 
+const TOOLS = [{
+  functionDeclarations: [{
+    name: "registrar_movimiento",
+    description: "Registra un ingreso o gasto que el usuario afirmó haber realizado.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        tipo: { type: "STRING", enum: ["ingreso", "gasto"] },
+        monto: { type: "NUMBER", description: "Monto positivo del movimiento." },
+        descripcion: { type: "STRING" },
+        categoria: { type: "STRING", description: "Nombre exacto de una categoría disponible." },
+      },
+      required: ["tipo", "monto", "descripcion", "categoria"],
+    },
+  }],
+}];
+
 function crearError(message, statusCode, cause) {
   const error = new Error(message, { cause });
   error.statusCode = statusCode;
@@ -189,30 +206,44 @@ function crearRespuestaFallback(pregunta, operacion) {
   };
 }
 
-async function consultarGemini({ pregunta, contexto }) {
+async function consultarGemini({ pregunta, contexto, onToolCall }) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw crearError("La integración con el asesor financiero no está configurada", 503);
   }
 
   try {
-    let response;
     let activeModel = GEMINI_MODEL;
     let lastUpstreamMessage = "";
 
     for (const model of GEMINI_MODELS) {
       activeModel = model;
-      response = await fetch(
+      const request = async (contents, expectJson = false) => fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: FINANCIAL_INSTRUCTIONS }] },
-            contents: [{
-              role: "user",
-              parts: [{
-                text: `RESPONDE SOLO CON JSON VÁLIDO. NO USES MARKDOWN NI TEXTO FUERA DEL JSON.
+            contents,
+            tools: TOOLS,
+            toolConfig: { functionCallingConfig: { mode: "AUTO" } },
+            generationConfig: {
+              temperature: 0.3,
+              maxOutputTokens: GEMINI_MAX_OUTPUT_TOKENS,
+              ...(expectJson && {
+                responseMimeType: "application/json",
+                responseSchema: RESPONSE_SCHEMA,
+              }),
+            },
+          }),
+        },
+      );
+
+      let response = await request([{
+        role: "user",
+        parts: [{
+          text: `RESPONDE SOLO CON JSON VÁLIDO O USA LA HERRAMIENTA registrar_movimiento.
 Pregunta del usuario:
 ${pregunta}
 
@@ -223,65 +254,78 @@ Verifica que tu respuesta final sea un único objeto JSON parseable con las prop
 saludo, resumen, observaciones, recomendacion y operacion. No uses "..." ni valores
 de ejemplo. En operacion, registrar=true solo si el usuario afirmó que recibió o
 gastó dinero; registrar=false para preguntas o consejos.`,
-              }],
-            }],
-            generationConfig: {
-              temperature: 0.3,
-              maxOutputTokens: GEMINI_MAX_OUTPUT_TOKENS,
-              responseMimeType: "application/json",
-              responseSchema: RESPONSE_SCHEMA,
-            },
-          }),
-        },
-      );
+        }],
+      }]);
 
-      if (response.ok) break;
-
-      const upstreamBody = await response.text();
-      try {
-        lastUpstreamMessage = JSON.parse(upstreamBody).error?.message || upstreamBody;
-      } catch {
-        lastUpstreamMessage = upstreamBody;
+      if (!response.ok) {
+        const upstreamBody = await response.text();
+        try {
+          lastUpstreamMessage = JSON.parse(upstreamBody).error?.message || upstreamBody;
+        } catch {
+          lastUpstreamMessage = upstreamBody;
+        }
+        console.warn("Gemini rechazó el modelo; probando fallback", {
+          model,
+          status: response.status,
+          message: lastUpstreamMessage.slice(0, 300),
+        });
+        continue;
       }
-      console.warn("Gemini rechazó el modelo; probando fallback", {
-        model,
-        status: response.status,
-        message: lastUpstreamMessage.slice(0, 300),
-      });
+
+      let data = await response.json();
+      const candidate = data.candidates?.[0];
+      const functionCall = candidate?.content?.parts?.find((part) => part.functionCall)?.functionCall;
+
+      if (functionCall) {
+        if (functionCall.name !== "registrar_movimiento" || typeof onToolCall !== "function") {
+          throw crearError("Gemini solicitó una herramienta no permitida", 502);
+        }
+
+        const toolResult = await onToolCall(functionCall.args || {});
+        response = await request([
+          { role: "user", parts: [{ text: `Pregunta original:\n${pregunta}` }] },
+          { role: "model", parts: candidate.content.parts },
+          {
+            role: "user",
+            parts: [{
+              functionResponse: {
+                name: functionCall.name,
+                response: { resultado: toolResult },
+              },
+            }],
+          },
+        ], true);
+        if (!response.ok) {
+          throw crearError("Gemini no pudo generar la respuesta posterior a la herramienta", 502);
+        }
+        data = await response.json();
+        const textoFinal = data.candidates?.[0]?.content?.parts
+          ?.map((part) => part.text || "")
+          .join("")
+          .trim();
+        if (!textoFinal) throw crearError("Gemini no devolvió una respuesta final", 502);
+        return {
+          respuesta: normalizarRespuesta(extraerObjetoJson(textoFinal), textoFinal),
+          toolResult,
+        };
+      }
+
+      const textoRespuesta = candidate?.content?.parts
+        ?.map((part) => part.text || "")
+        .join("")
+        .trim();
+      if (!textoRespuesta) throw crearError("El asesor financiero no devolvió contenido", 502);
+      return { respuesta: normalizarRespuesta(extraerObjetoJson(textoRespuesta), textoRespuesta), toolResult: null };
     }
 
-    if (!response?.ok) {
+    if (!lastUpstreamMessage) {
       console.error("Todos los modelos de Gemini rechazaron la solicitud", {
         models: GEMINI_MODELS,
         message: lastUpstreamMessage.slice(0, 500),
       });
       throw crearError("No fue posible consultar al asesor financiero", 502);
     }
-
-    let data;
-    try {
-      data = await response.json();
-    } catch (error) {
-      throw crearError("Gemini devolvió una respuesta HTTP inválida", 502, error);
-    }
-
-    const textoRespuesta = data.candidates?.[0]?.content?.parts
-      ?.map((part) => part.text || "")
-      .join("")
-      .trim();
-
-    if (!textoRespuesta) {
-      throw crearError("El asesor financiero no devolvió contenido", 502);
-    }
-
-    const respuesta = extraerObjetoJson(textoRespuesta);
-    if (!respuesta) {
-      console.warn("Gemini devolvió texto no estructurado; se normalizará como resumen", {
-        model: activeModel,
-      });
-    }
-
-    return normalizarRespuesta(respuesta, textoRespuesta);
+    throw crearError("No fue posible consultar al asesor financiero", 502);
   } catch (error) {
     if (error.statusCode) throw error;
     console.error("Error al comunicarse con Gemini", {

@@ -162,16 +162,39 @@ async function generarRespuesta(usuarioId, pregunta) {
 
   const operacionExplicita = extraerOperacionExplicita(pregunta, categorias);
   let respuesta;
+  let registro = null;
+  let herramientaEjecutada = false;
   try {
-    respuesta = await consultarGemini({ pregunta, contexto });
+    const resultadoGemini = await consultarGemini({
+      pregunta,
+      contexto,
+      onToolCall: async (argumentos) => {
+        herramientaEjecutada = true;
+        const herramientaRespuesta = await registrarOperacion(usuarioId, {
+          operacion: {
+            ...argumentos,
+            registrar: true,
+          },
+        }, categorias);
+        if (herramientaRespuesta?.estado !== "registrado") {
+          return herramientaRespuesta;
+        }
+        registro = herramientaRespuesta;
+        return herramientaRespuesta;
+      },
+    });
+    respuesta = resultadoGemini.respuesta;
   } catch (error) {
+    if (herramientaEjecutada) throw error;
     if (!operacionExplicita) throw error;
     respuesta = crearRespuestaFallback(pregunta, operacionExplicita);
   }
-  if (operacionExplicita) {
+  if (operacionExplicita && !registro) {
     respuesta.operacion = operacionExplicita;
   }
-  const registro = await registrarOperacion(usuarioId, respuesta, categorias);
+  if (!registro) {
+    registro = await registrarOperacion(usuarioId, respuesta, categorias);
+  }
   if (registro) {
     respuesta.registro = registro;
     if (registro.estado === "registrado") {
