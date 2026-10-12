@@ -1,5 +1,6 @@
 import { useState } from "react";
 import useAItools from "../../hooks/useAItools";
+import { normalizeAIMovement } from "./aiMovementGenerator";
 
 const SUGERENCIAS = [
   "¿Cómo está mi salud financiera este mes?",
@@ -7,7 +8,7 @@ const SUGERENCIAS = [
   "¿Qué debería ajustar para ahorrar más?",
 ];
 
-function AItoolspanel() {
+function AItoolspanel({ onMovementRegistered }) {
   const [pregunta, setPregunta] = useState("");
   const { respuesta, loading, error, preguntar } = useAItools();
 
@@ -15,7 +16,10 @@ function AItoolspanel() {
     event.preventDefault();
     const value = pregunta.trim();
     if (!value || loading) return;
-    await preguntar(value);
+    const response = await preguntar(value);
+    if (response?.registro?.estado === "registrado") {
+      onMovementRegistered?.(normalizeAIMovement(response.registro));
+    }
     setPregunta("");
   }
 

@@ -5,9 +5,8 @@ Usa únicamente los datos financieros proporcionados; no inventes información.
 Presenta importes con dos decimales y fechas claras.
 Puedes analizar ingresos, gastos, categorías, metas de ahorro, aportes e inversiones,
 además de flujo de efectivo, patrimonio y recomendaciones.
-No ejecutes operaciones de escritura ni eliminación desde esta consulta.
-Si el usuario solicita modificar o eliminar datos, indica que necesita confirmación
-explícita y que la operación debe hacerse mediante una acción separada.
+Solo prepara la operación estructurada; el servidor la validará y guardará cuando
+registrar=true. Nunca inventes que un movimiento fue guardado.
 Si falta información, dilo y solicita el dato concreto.
 REGLAS OBLIGATORIAS DE FORMATO:
 1. Devuelve únicamente un objeto JSON válido. Tu primer carácter debe ser { y tu
@@ -30,7 +29,13 @@ REGLAS OBLIGATORIAS DE FORMATO:
 10. Si el usuario afirma explícitamente que recibió o gastó dinero, prepara la
     operación en "operacion" con registrar=true. Si solo pregunta, analiza o pide
     consejo, usa registrar=false.
-11. Nunca inventes una categoría. Usa el nombre exacto de una categoría disponible
+11. Interpreta expresiones coloquiales en español como "me gasté", "pagué",
+    "compré" o "recibí". Convierte cantidades escritas como "3 millones" o
+    "3000000" al número 3000000. Para una salida como "ir al cine", elige la
+    categoría exacta "Entretenimiento" si está disponible. La fecha oficial del
+    movimiento la asigna el servidor con new Date() cuando recibe este mensaje;
+    no inventes fechas ni uses fechas antiguas.
+12. Nunca inventes una categoría. Usa el nombre exacto de una categoría disponible
     en los datos financieros. Si no existe una categoría adecuada, usa categoria=""
     y registrar=false.
 
@@ -174,6 +179,16 @@ function normalizarOperacion(operacion) {
   };
 }
 
+function crearRespuestaFallback(pregunta, operacion) {
+  return {
+    saludo: "He identificado el movimiento financiero.",
+    resumen: `Preparé el registro de un ${operacion.tipo} por ${operacion.monto.toFixed(2)}.`,
+    observaciones: [],
+    recomendacion: "Verifica que los datos del movimiento sean correctos.",
+    operacion,
+  };
+}
+
 async function consultarGemini({ pregunta, contexto }) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -277,4 +292,4 @@ gastó dinero; registrar=false para preguntas o consejos.`,
   }
 }
 
-module.exports = { consultarGemini };
+module.exports = { consultarGemini, crearRespuestaFallback };

@@ -20,7 +20,7 @@ const initialForm = {
 
 function App() {
   const { usuario: user, logout } = useAuthUsuario()
-  const { movimientos, resumen, loading, error, agregarMovimiento, eliminarMovimiento } = useMovimientos()
+  const { movimientos, resumen, loading, error, agregarMovimiento, eliminarMovimiento, recargar } = useMovimientos()
   const { categorias, loading: loadingCategorias, error: categoriasError } = useCategorias()
   const [form, setForm] = useState(initialForm)
   const [filter, setFilter] = useState('todos')
@@ -143,7 +143,7 @@ function App() {
 
       <CreadorChart movimientos={movimientos} categorias={categorias} />
       <WealthPlanningPanel />
-      <AItoolspanel />
+      <AItoolspanel onMovementRegistered={recargar} />
     </main>
   )
 }

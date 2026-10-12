@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import AuthContext from './authContextValue'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
@@ -18,6 +18,7 @@ function readUser() {
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY))
   const [usuario, setUsuario] = useState(readUser)
+  const [authAlert, setAuthAlert] = useState('')
 
   const authenticate = useCallback(async (mode, credentials) => {
     const response = await fetch(`${API_URL}/api/auth/${mode}`, {
@@ -51,6 +52,35 @@ export function AuthProvider({ children }) {
     setUsuario(null)
   }, [])
 
+  useEffect(() => {
+    const originalFetch = window.fetch
+    window.fetch = async (...args) => {
+      const response = await originalFetch(...args)
+      const requestUrl = typeof args[0] === 'string' ? args[0] : args[0]?.url || ''
+      if (response.status === 401 && !requestUrl.includes('/api/auth/')) {
+        window.dispatchEvent(new CustomEvent('auth:expired'))
+      }
+      return response
+    }
+
+    function handleExpiredToken() {
+      logout()
+      setAuthAlert('Token de autenticación inválido o expirado. Inicia sesión nuevamente para continuar.')
+    }
+
+    window.addEventListener('auth:expired', handleExpiredToken)
+    return () => {
+      window.fetch = originalFetch
+      window.removeEventListener('auth:expired', handleExpiredToken)
+    }
+  }, [logout])
+
+  useEffect(() => {
+    if (!authAlert) return undefined
+    const timeout = window.setTimeout(() => setAuthAlert(''), 7000)
+    return () => window.clearTimeout(timeout)
+  }, [authAlert])
+
   const value = useMemo(() => ({
     token,
     usuario,
@@ -60,5 +90,16 @@ export function AuthProvider({ children }) {
     logout,
   }), [token, usuario, login, register, logout])
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={value}>
+      {authAlert && (
+        <div className="auth-alert" role="alert">
+          <strong>Sesión finalizada</strong>
+          <span>{authAlert}</span>
+          <button type="button" aria-label="Cerrar alerta" onClick={() => setAuthAlert('')}>×</button>
+        </div>
+      )}
+      {children}
+    </AuthContext.Provider>
+  )
 }

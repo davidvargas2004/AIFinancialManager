@@ -16,6 +16,33 @@
   padding: 28px clamp(18px, 4vw, 56px) 64px;
 }
 
+.auth-alert {
+  position: fixed;
+  z-index: 10;
+  top: 20px;
+  right: 20px;
+  display: grid;
+  gap: 4px;
+  width: min(360px, calc(100% - 40px));
+  padding: 15px 42px 15px 17px;
+  border: 1px solid #f0b8a8;
+  border-radius: 13px;
+  color: #7d3424;
+  background: #fff4f0;
+  box-shadow: 0 12px 30px rgba(125, 52, 36, .16);
+}
+.auth-alert strong { font-size: 13px; }
+.auth-alert span { font-size: 12px; line-height: 1.4; }
+.auth-alert button {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font-size: 21px;
+}
+
 .topbar, .section-heading, .balance-card, .form-row, .movement-card {
   display: flex;
   align-items: center;

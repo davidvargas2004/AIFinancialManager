@@ -1,5 +1,6 @@
 const prisma = require("../../config/prisma");
-const { consultarGemini } = require("../../services/aiServices");
+const { consultarGemini, crearRespuestaFallback } = require("../../services/aiServices");
+const movementService = require("../movimientos/movementService");
 
 function serialize(value) {
   if (value instanceof Date) return value.toISOString();
@@ -13,6 +14,57 @@ function serialize(value) {
 
 function normalizarTexto(value) {
   return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+function fechaActual() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function extraerMonto(texto) {
+  const millones = texto.match(/(\d+(?:[.,]\d+)?)\s*millones?/i);
+  if (millones) return Number(millones[1].replace(",", ".")) * 1000000;
+
+  const numero = texto.match(/\b\d[\d.,]*\b/);
+  if (!numero) return 0;
+
+  const limpio = numero[0].replace(/[.,](?=\d{3}(?:\D|$))/g, "").replace(",", ".");
+  return Number(limpio);
+}
+
+function extraerOperacionExplicita(pregunta, categorias) {
+  const texto = normalizarTexto(pregunta);
+  const esGasto = /\b(me gaste|gaste|pague|pague|compre|compre|compre|inverti|inverti|gasto)\b/.test(texto);
+  const esIngreso = /\b(recibi|me pagaron|gane|ingreso|cobre|salario|trabajo extra)\b/.test(texto);
+  if ((!esGasto && !esIngreso) || (esGasto && esIngreso)) return null;
+
+  const monto = extraerMonto(texto);
+  if (!Number.isFinite(monto) || monto <= 0) return null;
+
+  const categoriaPreferida = esGasto && /\b(cine|pelicula|peliculas|teatro|concierto|juego)\b/.test(texto)
+    ? "Entretenimiento"
+    : esIngreso && /\b(salario|sueldo|nomina|trabajo extra)\b/.test(texto)
+      ? "Trabajo"
+      : "";
+  const categoria = categorias.find((item) =>
+    normalizarTexto(item.nombre) === normalizarTexto(categoriaPreferida));
+  if (!categoria) return null;
+
+  const descripcion = texto
+    .replace(/\b(me gaste|gaste|pague|compre|inverti|gasto|recibi|me pagaron|gane|ingreso|cobre|salario|trabajo extra)\b/gi, "")
+    .replace(/\b\d+(?:[.,]\d+)?\s*millones?\b/gi, "")
+    .replace(/\b\d[\d.,]*\b/g, "")
+    .replace(/\s+/g, " ")
+    .replace(/^\s*(en|por|de)\s+/i, "")
+    .trim();
+
+  return {
+    registrar: true,
+    tipo: esIngreso ? "ingreso" : "gasto",
+    monto,
+    descripcion: descripcion || (esIngreso ? "Ingreso registrado" : "Gasto registrado"),
+    categoria: categoria.nombre,
+    ocurridoEn: fechaActual(),
+  };
 }
 
 async function registrarOperacion(usuarioId, respuesta, categorias) {
@@ -34,21 +86,15 @@ async function registrarOperacion(usuarioId, respuesta, categorias) {
     return { estado: "pendiente", mensaje: `No registré el movimiento porque no existe la categoría "${operacion.categoria}".` };
   }
 
-  const ocurridoEn = operacion.ocurridoEn ? new Date(`${operacion.ocurridoEn}T00:00:00.000Z`) : new Date();
-  if (Number.isNaN(ocurridoEn.getTime())) {
-    return { estado: "pendiente", mensaje: "No registré el movimiento porque la fecha no es válida." };
-  }
+  // La fecha de registro la determina el servidor al recibir el mensaje.
+  const ocurridoEn = new Date();
 
-  const model = operacion.tipo === "ingreso" ? prisma.ingreso : prisma.gasto;
-  const movimiento = await model.create({
-    data: {
-      usuarioId,
-      categoriaId: categoria.id,
-      monto: operacion.monto,
-      descripcion: operacion.descripcion.slice(0, 500),
-      ocurridoEn,
-    },
-    include: { categoria: { select: { nombre: true } } },
+  const movimiento = await movementService.crearMovimiento(usuarioId, {
+    tipo: operacion.tipo,
+    categoriaId: categoria.id,
+    monto: operacion.monto,
+    descripcion: operacion.descripcion.slice(0, 500),
+    ocurridoEn,
   });
 
   return {
@@ -58,7 +104,7 @@ async function registrarOperacion(usuarioId, respuesta, categorias) {
     monto: Number(movimiento.monto),
     descripcion: movimiento.descripcion,
     categoria: movimiento.categoria.nombre,
-    ocurridoEn: movimiento.ocurridoEn.toISOString().slice(0, 10),
+    ocurridoEn: new Date(movimiento.ocurridoEn).toISOString().slice(0, 10),
   };
 }
 
@@ -114,7 +160,17 @@ async function generarRespuesta(usuarioId, pregunta) {
     inversiones,
   });
 
-  const respuesta = await consultarGemini({ pregunta, contexto });
+  const operacionExplicita = extraerOperacionExplicita(pregunta, categorias);
+  let respuesta;
+  try {
+    respuesta = await consultarGemini({ pregunta, contexto });
+  } catch (error) {
+    if (!operacionExplicita) throw error;
+    respuesta = crearRespuestaFallback(pregunta, operacionExplicita);
+  }
+  if (operacionExplicita) {
+    respuesta.operacion = operacionExplicita;
+  }
   const registro = await registrarOperacion(usuarioId, respuesta, categorias);
   if (registro) {
     respuesta.registro = registro;

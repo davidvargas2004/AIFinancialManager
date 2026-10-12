@@ -4,11 +4,6 @@ import useAuthUsuario from './useAuthUsuario'
 const API_URL = import.meta.env.VITE_API_URL || ''
 const API_KEY = import.meta.env.VITE_API_KEY || ''
 
-const demoMovimientos = [
-  { id: 'demo-income', tipo: 'ingreso', monto: 3200, descripcion: 'Salario mensual', categoria: 'Trabajo', categoriaId: 'demo-work', fecha: '2026-10-01' },
-  { id: 'demo-expense', tipo: 'gasto', monto: 86.4, descripcion: 'Compra semanal', categoria: 'Alimentación', categoriaId: 'demo-food', fecha: '2026-10-04' },
-]
-
 function normalizeMovement(item, tipo) {
   return {
     ...item,
@@ -21,9 +16,24 @@ function normalizeMovement(item, tipo) {
 
 export default function useMovimientos() {
   const { token } = useAuthUsuario()
-  const [movimientos, setMovimientos] = useState(demoMovimientos)
+  const [movimientos, setMovimientos] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const recargar = useCallback(async () => {
+    if (!token) return
+
+    try {
+      const response = await fetch(`${API_URL}/api/movimientos`, {
+        headers: { Authorization: `Bearer ${token}`, 'x-api-key': API_KEY },
+      })
+      if (!response.ok) throw new Error('No fue posible cargar tus movimientos')
+      const items = await response.json()
+      setMovimientos(items.map((item) => normalizeMovement(item, item.tipo)))
+    } catch (requestError) {
+      setError(requestError.message)
+    }
+  }, [token])
 
   useEffect(() => {
     if (!token) return
@@ -111,5 +121,5 @@ export default function useMovimientos() {
     return { ingresos, gastos, balance: ingresos - gastos }
   }, [movimientos])
 
-  return { movimientos, resumen, loading, error, agregarMovimiento, eliminarMovimiento }
+  return { movimientos, resumen, loading, error, agregarMovimiento, eliminarMovimiento, recargar }
 }
