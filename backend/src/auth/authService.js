@@ -27,6 +27,16 @@ function authError(message, statusCode = 400) {
   return error;
 }
 
+function translateProfileError(error) {
+  if (error?.code === "P2003") {
+    return authError(
+      "No se pudo crear el perfil porque la cuenta de autenticación no está sincronizada con la base de datos. Verifica que Supabase y DATABASE_URL pertenezcan al mismo proyecto.",
+      503,
+    );
+  }
+  return error;
+}
+
 async function ensureProfile(user) {
   if (!user?.id || !user.email) {
     throw authError("Supabase no devolvió un usuario válido", 502);
@@ -78,7 +88,12 @@ async function registerUser({ email, password, nombre }) {
   if (error) throw authError(error.message, error.status || 400);
   if (!data.user) throw authError("Supabase no pudo crear el usuario", 502);
 
-  const perfil = await ensureProfile(data.user);
+  let perfil;
+  try {
+    perfil = await ensureProfile(data.user);
+  } catch (profileError) {
+    throw translateProfileError(profileError);
+  }
   return {
     usuario: { id: perfil.id, email: perfil.email, nombre: perfil.nombre },
     session: data.session,
@@ -96,7 +111,12 @@ async function loginUser({ email, password }) {
 
   if (error) throw authError("Correo o contraseña incorrectos", 401);
 
-  const perfil = await ensureProfile(data.user);
+  let perfil;
+  try {
+    perfil = await ensureProfile(data.user);
+  } catch (profileError) {
+    throw translateProfileError(profileError);
+  }
   return {
     usuario: { id: perfil.id, email: perfil.email, nombre: perfil.nombre },
     session: data.session,
@@ -107,7 +127,12 @@ async function obtenerUsuarioPorToken(token) {
   const { data, error } = await supabase.auth.getUser(token);
   if (error || !data.user) throw authError("Token de autenticación inválido o expirado", 401);
 
-  const perfil = await ensureProfile(data.user);
+  let perfil;
+  try {
+    perfil = await ensureProfile(data.user);
+  } catch (profileError) {
+    throw translateProfileError(profileError);
+  }
   return { id: perfil.id, email: perfil.email, nombre: perfil.nombre };
 }
 
@@ -116,4 +141,6 @@ module.exports = {
   registerUser,
   loginUser,
   obtenerUsuarioPorToken,
+  ensureProfile,
+  translateProfileError,
 };

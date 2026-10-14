@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import useAuthUsuario from '../../hooks/useAuthUsuario'
+import ThemeToggle from '../components/ThemeToggle'
 
 function Register() {
   const { isAuthenticated, register } = useAuthUsuario()
@@ -35,7 +36,7 @@ function Register() {
   return (
     <main className="auth-shell">
       <section className="auth-card">
-        <div className="brand-mark">AF</div>
+        <div className="auth-card-header"><div className="brand-mark">AF</div><ThemeToggle /></div>
         <p className="eyebrow">PERSONAL FINANCE</p>
         <h1>Empieza a construir tu libertad.</h1>
         <p className="auth-copy">Crea tu cuenta y organiza tus finanzas.</p>

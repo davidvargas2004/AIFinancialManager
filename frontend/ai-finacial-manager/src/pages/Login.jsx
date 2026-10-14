@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import useAuthUsuario from '../../hooks/useAuthUsuario'
+import ThemeToggle from '../components/ThemeToggle'
 
 function Login() {
   const { isAuthenticated, login } = useAuthUsuario()
@@ -34,7 +35,7 @@ function Login() {
   return (
     <main className="auth-shell">
       <section className="auth-card">
-        <div className="brand-mark">AF</div>
+        <div className="auth-card-header"><div className="brand-mark">AF</div><ThemeToggle /></div>
         <p className="eyebrow">PERSONAL FINANCE</p>
         <h1>Tu dinero, bajo control.</h1>
         <p className="auth-copy">Inicia sesión para ver tus movimientos.</p>

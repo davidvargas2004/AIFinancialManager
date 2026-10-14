@@ -11,6 +11,7 @@ import WealthPlanningPanel from './components/WealthPlanningPanel'
 import useMetasAhorro from '../hooks/useMetasAhorro'
 import useInversiones from '../hooks/useInversiones'
 import { formatMoneyInput, parseMoney } from '../utils/numberFormat'
+import ThemeToggle from './components/ThemeToggle'
 
 const initialForm = {
   tipo: 'ingreso',
@@ -74,6 +75,7 @@ function App() {
           <p className="eyebrow">PERSONAL FINANCE</p>
           <h1>Mi dinero<span>.</span></h1>
         </div>
+        <ThemeToggle />
         <button className="avatar" type="button" aria-label="Cerrar sesión" onClick={logout}>
           {user.nombre?.slice(0, 2).toUpperCase() || user.email.slice(0, 2).toUpperCase()}
         </button>
