@@ -1,0 +1,8 @@
+{
+  "name": "ai-financial-manager",
+  "private": true,
+  "scripts": {
+    "build": "npm run build --prefix frontend/ai-finacial-manager",
+    "lint": "npm run lint --prefix frontend/ai-finacial-manager"
+  }
+}
