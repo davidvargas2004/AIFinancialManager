@@ -127,5 +127,5 @@ export default function useMovimientos({ tipo = '' } = {}) {
 
   const resumen = useMemo(() => resumenRemoto, [resumenRemoto])
 
-  return { movimientos, resumen, pagination, loading, error, agregarMovimiento, eliminarMovimiento, recargar }
+  return { movimientos, resumen, pagination, loading, error, agregarMovimiento, eliminarMovimiento, recargar, version: refreshKey }
 }
