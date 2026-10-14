@@ -10,6 +10,7 @@ const SUGERENCIAS = [
 
 function AItoolspanel({ onMovementRegistered }) {
   const [pregunta, setPregunta] = useState("");
+  const [operacionPendiente, setOperacionPendiente] = useState(null);
   const { respuesta, loading, error, preguntar } = useAItools();
 
   async function submit(event) {
@@ -17,10 +18,28 @@ function AItoolspanel({ onMovementRegistered }) {
     const value = pregunta.trim();
     if (!value || loading) return;
     const response = await preguntar(value);
+    setOperacionPendiente(null);
+    if (response?.registro?.estado === "pendiente" && response.registro.tipo) {
+      setOperacionPendiente({ pregunta: value, operacion: response.registro });
+    } else if (response?.registro?.estado === "registrado") {
+      setOperacionPendiente(null);
+    }
     if (response?.registro?.estado === "registrado") {
       onMovementRegistered?.(normalizeAIMovement(response.registro));
     }
     setPregunta("");
+  }
+
+  async function confirmarOperacion() {
+    if (!operacionPendiente || loading) return;
+    const response = await preguntar(operacionPendiente.pregunta, {
+      confirmarOperacion: operacionPendiente.operacion,
+    });
+    if (response?.registro?.estado === "registrado") {
+      onMovementRegistered?.(normalizeAIMovement(response.registro));
+      setOperacionPendiente(null);
+      setPregunta("");
+    }
   }
 
   function handleKeyDown(event) {
@@ -88,6 +107,11 @@ function AItoolspanel({ onMovementRegistered }) {
               <strong>Recomendación</strong>
               <p>{respuesta.recomendacion}</p>
             </div>
+            {operacionPendiente && (
+              <button className="wealth-primary ai-confirm" type="button" onClick={confirmarOperacion} disabled={loading}>
+                Confirmar registro del movimiento <span>✓</span>
+              </button>
+            )}
           </div>
         </div>
       )}

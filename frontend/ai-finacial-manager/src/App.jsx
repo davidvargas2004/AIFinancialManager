@@ -10,6 +10,7 @@ import AItoolspanel from './components/AItoolspanel'
 import WealthPlanningPanel from './components/WealthPlanningPanel'
 import useMetasAhorro from '../hooks/useMetasAhorro'
 import useInversiones from '../hooks/useInversiones'
+import { formatMoneyInput, parseMoney } from '../utils/numberFormat'
 
 const initialForm = {
   tipo: 'ingreso',
@@ -37,10 +38,14 @@ function App() {
     resumen.balance - resumenAhorros.aportado - resumenInversiones.invertido,
     0,
   )
-  const saldoTotal = resumen.balance + resumenAhorros.aportado + resumenInversiones.valorActual
+  const saldoTotal = dineroSinDestino + resumenAhorros.aportado + resumenInversiones.valorActual
 
   function updateForm(event) {
     const { name, value } = event.target
+    if (name === 'monto') {
+      setForm((current) => ({ ...current, monto: formatMoneyInput(value) }))
+      return
+    }
     if (name === 'categoriaId') {
       const category = categorias.find(({ id }) => id === value)
       setForm((current) => ({ ...current, categoriaId: value, categoria: category?.nombre || '' }))
@@ -54,10 +59,11 @@ function App() {
     const categoria = categorias.find(({ id }) => id === form.categoriaId) || categorias[0]
     const movementForm = {
       ...form,
+      monto: parseMoney(form.monto),
       categoriaId: categoria?.id || '',
       categoria: categoria?.nombre || '',
     }
-    if (!movementForm.monto || Number(movementForm.monto) <= 0 || !movementForm.descripcion.trim() || !movementForm.categoriaId) return
+    if (!movementForm.monto || movementForm.monto <= 0 || !movementForm.descripcion.trim() || !movementForm.categoriaId) return
     await agregarMovimiento(movementForm)
     setForm((current) => ({ ...initialForm, tipo: current.tipo }))
   }
@@ -78,16 +84,16 @@ function App() {
       <section className="balance-card">
         <div>
           <p className="eyebrow light">SALDO TOTAL</p>
-          <p className="balance">${saldoTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+          <p className="balance">${saldoTotal.toLocaleString('es-CO', { minimumFractionDigits: 2 })}</p>
           <span className="balance-caption">Incluye balance, ahorros e inversiones</span>
         </div>
         <div className="balance-orbit" aria-hidden="true"><span>✦</span></div>
       </section>
 
       <section className="summary-grid" aria-label="Resumen financiero">
-        <div className="summary-item income"><span>↗</span><small>Ingresos</small><strong>${resumen.ingresos.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></div>
-        <div className="summary-item expense"><span>↘</span><small>Gastos</small><strong>${resumen.gastos.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></div>
-        <div className="summary-item available"><span>◎</span><small>Balance disponible</small><strong>${dineroSinDestino.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></div>
+        <div className="summary-item income"><span>↗</span><small>Ingresos</small><strong>${resumen.ingresos.toLocaleString('es-CO', { minimumFractionDigits: 2 })}</strong></div>
+        <div className="summary-item expense"><span>↘</span><small>Gastos</small><strong>${resumen.gastos.toLocaleString('es-CO', { minimumFractionDigits: 2 })}</strong></div>
+        <div className="summary-item available"><span>◎</span><small>Balance disponible</small><strong>${dineroSinDestino.toLocaleString('es-CO', { minimumFractionDigits: 2 })}</strong></div>
       </section>
 
       <section className="content-grid">
@@ -108,7 +114,7 @@ function App() {
               ))}
             </div>
             <label>Monto
-              <div className="money-input"><span>$</span><input name="monto" type="number" min="0.01" step="0.01" placeholder="0.00" value={form.monto} onChange={updateForm} required /></div>
+              <div className="money-input"><span>$</span><input name="monto" type="text" inputMode="decimal" placeholder="0" value={form.monto} onChange={updateForm} required /></div>
             </label>
             <label>Descripción
               <input name="descripcion" type="text" maxLength="500" placeholder="¿En qué fue este movimiento?" value={form.descripcion} onChange={updateForm} required />

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import useMetasAhorro from '../../hooks/useMetasAhorro'
 import useInversiones from '../../hooks/useInversiones'
+import { formatMoneyInput, parseMoney } from '../../utils/numberFormat'
 
 const currency = (value) => `$${Number(value).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const today = new Date().toISOString().slice(0, 10)
@@ -21,8 +22,9 @@ function GoalCard({ meta, onAddContribution, onDelete }) {
 
   async function submitContribution(event) {
     event.preventDefault()
-    if (!contribution.monto || Number(contribution.monto) <= 0) return
-    const saved = await onAddContribution(meta.id, contribution)
+    const monto = parseMoney(contribution.monto)
+    if (!monto || monto <= 0) return
+    const saved = await onAddContribution(meta.id, { ...contribution, monto })
     if (saved) {
       setContribution({ monto: '', descripcion: '', ocurridoEn: today })
       setShowContribution(false)
@@ -41,7 +43,7 @@ function GoalCard({ meta, onAddContribution, onDelete }) {
       <p className="goal-remaining">{remaining > 0 ? `Faltan ${currency(remaining)} para completar esta meta` : 'Meta completada. Excelente disciplina financiera.'}</p>
       {showContribution ? (
         <form className="inline-contribution" onSubmit={submitContribution}>
-          <input type="number" min="0.01" step="0.01" placeholder="Monto del aporte" value={contribution.monto} onChange={(event) => setContribution({ ...contribution, monto: event.target.value })} required />
+          <input type="text" inputMode="decimal" placeholder="Monto del aporte" value={contribution.monto} onChange={(event) => setContribution({ ...contribution, monto: formatMoneyInput(event.target.value) })} required />
           <input type="date" value={contribution.ocurridoEn} onChange={(event) => setContribution({ ...contribution, ocurridoEn: event.target.value })} required />
           <input type="text" placeholder="Nota opcional" value={contribution.descripcion} onChange={(event) => setContribution({ ...contribution, descripcion: event.target.value })} />
           <div><button className="wealth-secondary" type="button" onClick={() => setShowContribution(false)}>Cancelar</button><button className="wealth-primary small" type="submit">Guardar aporte</button></div>
@@ -57,12 +59,13 @@ function GoalForm({ onSubmit, loading }) {
   const [form, setForm] = useState(initialGoal)
   async function submit(event) {
     event.preventDefault()
-    if (!form.nombre.trim() || Number(form.montoObjetivo) <= 0) return
-    if (await onSubmit(form)) setForm(initialGoal)
+    const montoObjetivo = parseMoney(form.montoObjetivo)
+    if (!form.nombre.trim() || !montoObjetivo || montoObjetivo <= 0) return
+    if (await onSubmit({ ...form, montoObjetivo })) setForm(initialGoal)
   }
   return (
     <form className="wealth-form" onSubmit={submit}>
-      <div className="form-grid"><label>Nombre de la meta<input value={form.nombre} onChange={(event) => setForm({ ...form, nombre: event.target.value })} placeholder="Ej. Fondo de emergencia" maxLength={120} required /></label><label>Objetivo financiero<input type="number" min="0.01" step="0.01" value={form.montoObjetivo} onChange={(event) => setForm({ ...form, montoObjetivo: event.target.value })} placeholder="0.00" required /></label></div>
+      <div className="form-grid"><label>Nombre de la meta<input value={form.nombre} onChange={(event) => setForm({ ...form, nombre: event.target.value })} placeholder="Ej. Fondo de emergencia" maxLength={120} required /></label><label>Objetivo financiero<input type="text" inputMode="decimal" value={form.montoObjetivo} onChange={(event) => setForm({ ...form, montoObjetivo: formatMoneyInput(event.target.value) })} placeholder="0" required /></label></div>
       <div className="form-grid"><label>Fecha objetivo<input type="date" value={form.fechaObjetivo} onChange={(event) => setForm({ ...form, fechaObjetivo: event.target.value })} /></label><label>Descripción<input value={form.descripcion} onChange={(event) => setForm({ ...form, descripcion: event.target.value })} placeholder="¿Para qué estás ahorrando?" maxLength={500} /></label></div>
       <button className="wealth-primary" type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Crear meta de ahorro'} <span>→</span></button>
     </form>
@@ -73,13 +76,15 @@ function InvestmentForm({ onSubmit, loading }) {
   const [form, setForm] = useState(initialInvestment)
   async function submit(event) {
     event.preventDefault()
-    if (!form.nombre.trim() || Number(form.montoInvertido) <= 0 || Number(form.valorActual) < 0) return
-    if (await onSubmit(form)) setForm({ ...initialInvestment, fechaInicio: today })
+    const montoInvertido = parseMoney(form.montoInvertido)
+    const valorActual = parseMoney(form.valorActual)
+    if (!form.nombre.trim() || !montoInvertido || montoInvertido <= 0 || Number.isNaN(valorActual) || valorActual < 0) return
+    if (await onSubmit({ ...form, montoInvertido, valorActual })) setForm({ ...initialInvestment, fechaInicio: today })
   }
   return (
     <form className="wealth-form" onSubmit={submit}>
       <div className="form-grid"><label>Activo o vehículo<input value={form.nombre} onChange={(event) => setForm({ ...form, nombre: event.target.value })} placeholder="Ej. ETF S&P 500" maxLength={120} required /></label><label>Tipo<select value={form.tipo} onChange={(event) => setForm({ ...form, tipo: event.target.value })}>{['ACCIONES', 'BONOS', 'FONDOS', 'CRIPTOMONEDAS', 'INMUEBLES', 'OTRO'].map((tipo) => <option key={tipo} value={tipo}>{tipo[0] + tipo.slice(1).toLowerCase()}</option>)}</select></label></div>
-      <div className="form-grid"><label>Capital invertido<input type="number" min="0.01" step="0.01" value={form.montoInvertido} onChange={(event) => setForm({ ...form, montoInvertido: event.target.value })} placeholder="0.00" required /></label><label>Valor actual<input type="number" min="0" step="0.01" value={form.valorActual} onChange={(event) => setForm({ ...form, valorActual: event.target.value })} placeholder="0.00" required /></label></div>
+      <div className="form-grid"><label>Capital invertido<input type="text" inputMode="decimal" value={form.montoInvertido} onChange={(event) => setForm({ ...form, montoInvertido: formatMoneyInput(event.target.value) })} placeholder="0" required /></label><label>Valor actual<input type="text" inputMode="decimal" value={form.valorActual} onChange={(event) => setForm({ ...form, valorActual: formatMoneyInput(event.target.value) })} placeholder="0" required /></label></div>
       <div className="form-grid"><label>Fecha de inicio<input type="date" value={form.fechaInicio} onChange={(event) => setForm({ ...form, fechaInicio: event.target.value })} required /></label><label>Estado<select value={form.estado} onChange={(event) => setForm({ ...form, estado: event.target.value })}><option value="ACTIVA">Activa</option><option value="PAUSADA">Pausada</option><option value="CERRADA">Cerrada</option></select></label></div>
       <label>Descripción<input value={form.descripcion} onChange={(event) => setForm({ ...form, descripcion: event.target.value })} placeholder="Estrategia, broker o nota de seguimiento" maxLength={500} /></label>
       <button className="wealth-primary" type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Añadir inversión'} <span>→</span></button>

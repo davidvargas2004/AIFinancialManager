@@ -37,7 +37,7 @@ export default function useAItools() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const preguntar = useCallback(async (pregunta) => {
+  const preguntar = useCallback(async (pregunta, options = {}) => {
     if (!token) return null
 
     setLoading(true)
@@ -51,7 +51,7 @@ export default function useAItools() {
           Authorization: `Bearer ${token}`,
           'x-api-key': API_KEY,
         },
-        body: JSON.stringify({ pregunta }),
+        body: JSON.stringify({ pregunta, ...options }),
       })
       const data = await response.json().catch(() => ({}))
 

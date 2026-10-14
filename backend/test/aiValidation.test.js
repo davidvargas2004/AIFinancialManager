@@ -65,3 +65,37 @@ test("detiene entradas inválidas antes de llamar a la IA o Prisma", async () =>
   assert.deepEqual(response.body, { message: "La pregunta es obligatoria" });
   assert.equal(llamadas, 0);
 });
+
+test("detecta un gasto explícito y prepara una operación pendiente para confirmar", () => {
+  const operacion = aiService.extraerOperacionExplicita(
+    "Gasté 40.000 en comida",
+    [{ nombre: "Comida" }, { nombre: "Transporte" }],
+  );
+
+  assert.deepEqual(operacion, {
+    registrar: false,
+    tipo: "gasto",
+    monto: 40000,
+    descripcion: "comida",
+    categoria: "Comida",
+    ocurridoEn: operacion.ocurridoEn,
+  });
+});
+
+test("convierte una operación válida sugerida por la IA en una propuesta pendiente", () => {
+  const operacion = aiService.normalizarOperacionSugerida(
+    {
+      registrar: false,
+      tipo: "gasto",
+      monto: 40000,
+      descripcion: "comida",
+      categoria: "Alimentación",
+    },
+    [{ nombre: "Alimentación" }],
+  );
+
+  assert.equal(operacion.tipo, "gasto");
+  assert.equal(operacion.monto, 40000);
+  assert.equal(operacion.categoria, "Alimentación");
+  assert.equal(operacion.registrar, false);
+});
