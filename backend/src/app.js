@@ -10,7 +10,6 @@ const aporteAhorroRoutes = require("./modules/aportes-ahorro/aporte-ahorro.route
 const inversionRoutes = require("./modules/inversiones/inversion.routes");
 const movementRoutes = require("./modules/movimientos/movement.routes");
 const aiRoutes = require("./modules/aiTools/aiRoute");
-const resumenRoutes = require("./modules/resumen-financiero/resumen.routes");
 
 const app = express();
 
@@ -25,7 +24,6 @@ app.get("/api/health", (req, res) => {
   res.json({ ok: true, service: "ai-financial-manager-api" });
 });
 
-app.use("/api/resumen-financiero", requireUser, resumenRoutes);
 app.use("/api/categorias", requireUser, categoriaRoutes);
 app.use("/api/ingresos", requireUser, ingresoRoutes);
 app.use("/api/gastos", requireUser, gastoRoutes);

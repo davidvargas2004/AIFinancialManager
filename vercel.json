@@ -1,6 +1,6 @@
 {
   "framework": "vite",
-  "installCommand": "npm ci --prefix backend && npm ci --prefix frontend/ai-finacial-manager",
-  "buildCommand": "npm run build --prefix frontend/ai-finacial-manager",
+  "installCommand": "npm install --prefix backend && npm install --prefix frontend/ai-finacial-manager",
+  "buildCommand": "npm run build",
   "outputDirectory": "frontend/ai-finacial-manager/dist"
 }

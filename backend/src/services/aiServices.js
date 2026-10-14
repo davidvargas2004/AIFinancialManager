@@ -76,14 +76,15 @@ function ocultarContexto(value) {
   return value;
 }
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const GEMINI_MAX_OUTPUT_TOKENS = Math.min(
   Math.max(Number(process.env.GEMINI_MAX_OUTPUT_TOKENS || 3000), 1200),
   8192,
 );
 const GEMINI_MODELS = [...new Set([
   GEMINI_MODEL,
-  "gemini-3.6-flash",
+  "gemini-2.0-flash",
+  "gemini-3.5-flash-lite",
 ])];
 
 const RESPONSE_SCHEMA = {
@@ -265,21 +266,11 @@ requiere una confirmación separada validada por el servidor.`,
         } catch {
           lastUpstreamMessage = upstreamBody;
         }
-        const quotaExceeded = response.status === 429;
-        const serviceUnavailable = response.status === 503;
-        console.warn(quotaExceeded || !serviceUnavailable
-          ? "Gemini rechazó la solicitud"
-          : "Gemini no está disponible; probando fallback", {
+        console.warn("Gemini rechazó el modelo; probando fallback", {
           model,
           status: response.status,
           message: lastUpstreamMessage.slice(0, 300),
         });
-        if (quotaExceeded) {
-          throw crearError(
-            "La cuota de Gemini fue excedida. Revisa el plan, la facturación o usa una API key con cuota disponible.",
-            429,
-          );
-        }
         continue;
       }
 
@@ -311,7 +302,7 @@ requiere una confirmación separada validada por el servidor.`,
     });
     throw crearError(
       `No fue posible consultar al asesor financiero${lastUpstreamMessage ? `: ${lastUpstreamMessage.slice(0, 300)}` : ""}`,
-      503,
+      502,
     );
   } catch (error) {
     if (error.statusCode) throw error;

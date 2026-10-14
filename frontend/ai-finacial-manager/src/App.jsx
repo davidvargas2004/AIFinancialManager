@@ -14,7 +14,6 @@ import { formatMoneyInput, parseMoney } from '../utils/numberFormat'
 import { localDateInputValue } from '../utils/dateFormat'
 import { calculateBalance } from '../utils/balance'
 import ThemeToggle from './components/ThemeToggle'
-import useResumenFinanciero from '../hooks/useResumenFinanciero'
 
 const initialForm = {
   tipo: 'ingreso',
@@ -28,21 +27,20 @@ const initialForm = {
 function App() {
   const { usuario: user, logout } = useAuthUsuario()
   const [filter, setFilter] = useState('todos')
-  const { movimientos, resumen, pagination, loading, error, agregarMovimiento, eliminarMovimiento, recargar, version } = useMovimientos({
+  const { movimientos, resumen, pagination, loading, error, agregarMovimiento, eliminarMovimiento, recargar } = useMovimientos({
     tipo: filter === 'todos' ? '' : filter,
   })
-  const { resumen: resumenFinanciero, error: resumenError } = useResumenFinanciero(version)
   const { resumen: resumenAhorros } = useMetasAhorro()
   const { resumen: resumenInversiones } = useInversiones()
   const { categorias, loading: loadingCategorias, error: categoriasError } = useCategorias()
   const [form, setForm] = useState(initialForm)
   const [categoryType, setCategoryType] = useState(form.tipo)
   const { dineroSinDestino, saldoTotal } = calculateBalance({
-    ingresos: resumenFinanciero.ingresos,
-    gastos: resumenFinanciero.gastos,
-    ahorros: resumenFinanciero.aportes,
-    inversiones: resumenFinanciero.capitalInvertido,
-    valorInversiones: resumenFinanciero.valorInversiones,
+    ingresos: resumen.ingresos,
+    gastos: resumen.gastos,
+    ahorros: resumenAhorros.aportado,
+    inversiones: resumenInversiones.invertido,
+    valorInversiones: resumenInversiones.valorActual,
   })
 
   function updateForm(event) {
@@ -143,7 +141,7 @@ function App() {
                 <input name="fecha" type="date" value={form.fecha} onChange={updateForm} required />
               </label>
             </div>
-            {(error || categoriasError || resumenError) && <p className="form-error">{error || categoriasError || resumenError}</p>}
+            {(error || categoriasError) && <p className="form-error">{error || categoriasError}</p>}
             <button className={`primary-button ${form.tipo}`} type="submit" disabled={loading || loadingCategorias || !categorias.length}>
               {loading ? 'Guardando...' : `Guardar ${form.tipo}`}
               <span>→</span>
