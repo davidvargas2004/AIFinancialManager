@@ -76,14 +76,14 @@ function ocultarContexto(value) {
   return value;
 }
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 const GEMINI_MAX_OUTPUT_TOKENS = Math.min(
   Math.max(Number(process.env.GEMINI_MAX_OUTPUT_TOKENS || 3000), 1200),
   8192,
 );
 const GEMINI_MODELS = [...new Set([
   GEMINI_MODEL,
-  "gemini-3.8-flash",
+  "gemini-3.6-flash",
 ])];
 
 const RESPONSE_SCHEMA = {
