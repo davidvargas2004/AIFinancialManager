@@ -8,6 +8,8 @@ import useCategorias from '../hooks/useCategorias'
 import CategoryPicker from './components/CategoryPicker'
 import AItoolspanel from './components/AItoolspanel'
 import WealthPlanningPanel from './components/WealthPlanningPanel'
+import useMetasAhorro from '../hooks/useMetasAhorro'
+import useInversiones from '../hooks/useInversiones'
 
 const initialForm = {
   tipo: 'ingreso',
@@ -21,6 +23,8 @@ const initialForm = {
 function App() {
   const { usuario: user, logout } = useAuthUsuario()
   const { movimientos, resumen, loading, error, agregarMovimiento, eliminarMovimiento, recargar } = useMovimientos()
+  const { resumen: resumenAhorros } = useMetasAhorro()
+  const { resumen: resumenInversiones } = useInversiones()
   const { categorias, loading: loadingCategorias, error: categoriasError } = useCategorias()
   const [form, setForm] = useState(initialForm)
   const [filter, setFilter] = useState('todos')
@@ -29,6 +33,11 @@ function App() {
   const visibleMovimientos = filter === 'todos'
     ? movimientos
     : movimientos.filter(({ tipo }) => tipo === filter)
+  const dineroSinDestino = Math.max(
+    resumen.balance - resumenAhorros.aportado - resumenInversiones.invertido,
+    0,
+  )
+  const saldoTotal = resumen.balance + resumenAhorros.aportado + resumenInversiones.valorActual
 
   function updateForm(event) {
     const { name, value } = event.target
@@ -68,9 +77,9 @@ function App() {
 
       <section className="balance-card">
         <div>
-          <p className="eyebrow light">BALANCE DISPONIBLE</p>
-          <p className="balance">${resumen.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
-          <span className="balance-caption">Actualizado hace un momento <b>↗ 8.4%</b></span>
+          <p className="eyebrow light">SALDO TOTAL</p>
+          <p className="balance">${saldoTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+          <span className="balance-caption">Incluye balance, ahorros e inversiones</span>
         </div>
         <div className="balance-orbit" aria-hidden="true"><span>✦</span></div>
       </section>
@@ -78,6 +87,7 @@ function App() {
       <section className="summary-grid" aria-label="Resumen financiero">
         <div className="summary-item income"><span>↗</span><small>Ingresos</small><strong>${resumen.ingresos.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></div>
         <div className="summary-item expense"><span>↘</span><small>Gastos</small><strong>${resumen.gastos.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></div>
+        <div className="summary-item available"><span>◎</span><small>Balance disponible</small><strong>${dineroSinDestino.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></div>
       </section>
 
       <section className="content-grid">
@@ -142,7 +152,7 @@ function App() {
       </section>
 
       <CreadorChart movimientos={movimientos} categorias={categorias} />
-      <WealthPlanningPanel />
+      <WealthPlanningPanel balanceDisponible={dineroSinDestino} saldoTotal={saldoTotal} />
       <AItoolspanel onMovementRegistered={recargar} />
     </main>
   )

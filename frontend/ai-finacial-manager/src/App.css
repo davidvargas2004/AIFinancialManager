@@ -87,13 +87,14 @@ h2 { color: var(--ink); font-size: clamp(19px, 3vw, 24px); font-weight: 850; let
 .balance-orbit::after { inset: 40px; background: var(--green); border: 0; box-shadow: 0 0 0 11px rgba(183,245,88,.1), 0 0 50px rgba(183,245,88,.42); }
 .balance-orbit span { position: absolute; z-index: 1; inset: 0; display: grid; place-items: center; color: var(--green-dark); font-size: 23px; }
 
-.summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin: 18px 0 38px; }
+.summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 18px 0 38px; }
 .summary-item { display: grid; grid-template-columns: 39px 1fr; align-items: center; column-gap: 11px; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); }
 .summary-item span { grid-row: span 2; display: grid; place-items: center; width: 35px; height: 35px; border-radius: 11px; font-size: 19px; font-weight: 800; }
 .summary-item small { color: var(--muted); font-size: 11px; font-weight: 700; }
 .summary-item strong { margin-top: 2px; font-size: 17px; font-weight: 850; letter-spacing: -.04em; }
 .income span { color: #4a8b23; background: #eaf9d5; }
 .expense span { color: #c86645; background: #ffebe5; }
+.available span { color: #416f59; background: #e4f1e9; }
 .content-grid { display: grid; grid-template-columns: minmax(300px, .86fr) minmax(340px, 1.14fr); gap: 22px; }
 .form-panel, .history-panel { padding: clamp(22px, 3vw, 30px); border: 1px solid var(--line); border-radius: 23px; background: var(--paper); box-shadow: 0 9px 25px rgba(25,50,32,.035); }
 .charts-panel { margin-top: 22px; padding: clamp(22px, 3vw, 30px); border: 1px solid var(--line); border-radius: 23px; background: var(--paper); box-shadow: 0 9px 25px rgba(25,50,32,.035); }
@@ -183,6 +184,7 @@ input:focus, select:focus { border-color: #9bcf58; box-shadow: 0 0 0 3px rgba(18
 .wealth-metric { display: grid; gap: 7px; padding: 19px 21px; background: #fff; }
 .wealth-metric span, .investment-values span { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
 .wealth-metric strong { font-size: 20px; letter-spacing: -.05em; }
+.wealth-metric strong.capital-total { color: #4a8b23; }
 .positive { color: #568f2d !important; }.negative { color: #cb6849 !important; }
 .wealth-tabs { display: flex; gap: 4px; padding: 17px 24px 0; border-bottom: 1px solid var(--line); }
 .wealth-tabs button { padding: 11px 13px 14px; border: 0; border-bottom: 2px solid transparent; color: var(--muted); background: transparent; font-size: 12px; font-weight: 800; }
@@ -270,6 +272,7 @@ input:focus, select:focus { border-color: #9bcf58; box-shadow: 0 0 0 3px rgba(18
   .balance-orbit::before { inset: 11px; }
   .balance-orbit::after { inset: 27px; }
   .summary-grid { margin-bottom: 25px; }
+  .summary-grid { grid-template-columns: 1fr; }
   .summary-item { padding: 13px 10px; }
   .summary-item strong { font-size: 14px; }
   .content-grid { grid-template-columns: 1fr; }

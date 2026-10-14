@@ -87,20 +87,19 @@ function InvestmentForm({ onSubmit, loading }) {
   )
 }
 
-function WealthPlanningPanel() {
+function WealthPlanningPanel({ balanceDisponible = 0, saldoTotal = 0 }) {
   const goals = useMetasAhorro()
   const investments = useInversiones()
   const [tab, setTab] = useState('metas')
-  const totalPatrimonio = goals.resumen.aportado + investments.resumen.valorActual
-  const yieldTone = investments.resumen.rendimiento >= 0 ? 'positive' : 'negative'
+  const capitalReal = Number(saldoTotal)
 
   return (
     <section className="wealth-panel" aria-labelledby="wealth-title">
       <div className="wealth-hero">
-        <div><p className="eyebrow light">PLANIFICACIÓN PATRIMONIAL</p><h2 id="wealth-title">Construye tu libertad financiera<span>.</span></h2><p>Convierte tus objetivos en un sistema medible de ahorro e inversión.</p></div>
+        <div><p className="eyebrow light">PLANIFICACIÓN PATRIMONIAL</p><h2 id="wealth-title">Construye tu libertad financiera<span>.</span></h2><p>Separa tu dinero disponible de tus ahorros e inversiones para conocer tu capital real.</p></div>
         <div className="wealth-hero-orbit"><span>✦</span></div>
       </div>
-      <div className="wealth-metrics"><Metric label="Patrimonio gestionado" value={currency(totalPatrimonio)} /><Metric label="Capital invertido" value={currency(investments.resumen.invertido)} /><Metric label="Rendimiento estimado" value={`${investments.resumen.rendimiento >= 0 ? '+' : ''}${currency(investments.resumen.rendimiento)}`} tone={yieldTone} /><Metric label="Metas activas" value={goals.resumen.activas} /></div>
+      <div className="wealth-metrics"><Metric label="Capital real" value={currency(capitalReal)} tone="capital-total" /><Metric label="Ahorros acumulados" value={currency(goals.resumen.aportado)} /><Metric label="Inversiones actuales" value={currency(investments.resumen.valorActual)} /><Metric label="Balance disponible" value={currency(balanceDisponible)} tone={balanceDisponible > 0 ? 'positive' : ''} /></div>
       <div className="wealth-tabs"><button className={tab === 'metas' ? 'active' : ''} type="button" onClick={() => setTab('metas')}>Metas de ahorro <b>{goals.metas.length}</b></button><button className={tab === 'inversiones' ? 'active' : ''} type="button" onClick={() => setTab('inversiones')}>Portafolio <b>{investments.inversiones.length}</b></button></div>
       {goals.error && <p className="form-error">{goals.error}</p>}
       {investments.error && <p className="form-error">{investments.error}</p>}
