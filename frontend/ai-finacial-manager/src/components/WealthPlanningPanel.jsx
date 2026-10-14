@@ -2,9 +2,10 @@ import { useState } from 'react'
 import useMetasAhorro from '../../hooks/useMetasAhorro'
 import useInversiones from '../../hooks/useInversiones'
 import { formatMoneyInput, parseMoney } from '../../utils/numberFormat'
+import { localDateInputValue } from '../../utils/dateFormat'
 
 const currency = (value) => `$${Number(value).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-const today = new Date().toISOString().slice(0, 10)
+const today = localDateInputValue()
 
 const initialGoal = { nombre: '', descripcion: '', montoObjetivo: '', fechaObjetivo: '' }
 const initialInvestment = {

@@ -15,6 +15,13 @@ function getCategory(movement) {
   return movement.categoria?.nombre || movement.categoria || 'Sin categoría'
 }
 
+function getCalendarDate(value) {
+  const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (match) return match.slice(1).map(Number)
+  const date = new Date(value)
+  return [date.getFullYear(), date.getMonth() + 1, date.getDate()]
+}
+
 function buildCurrentMonthData(movimientos, categorias) {
   const currentDate = new Date()
   const currentMonth = currentDate.getMonth()
@@ -26,8 +33,8 @@ function buildCurrentMonthData(movimientos, categorias) {
 
   const data = categoryNames.map((name) => ({ name, ingresos: 0, gastos: 0 }))
   movimientos.forEach((movement) => {
-    const date = new Date(movement.fecha || movement.ocurridoEn)
-    if (date.getMonth() !== currentMonth || date.getFullYear() !== currentYear) return
+    const [year, month] = getCalendarDate(movement.fecha || movement.ocurridoEn)
+    if (month - 1 !== currentMonth || year !== currentYear) return
 
     const row = data.find(({ name }) => name === getCategory(movement))
     if (!row) return

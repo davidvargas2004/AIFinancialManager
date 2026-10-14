@@ -11,6 +11,7 @@ import WealthPlanningPanel from './components/WealthPlanningPanel'
 import useMetasAhorro from '../hooks/useMetasAhorro'
 import useInversiones from '../hooks/useInversiones'
 import { formatMoneyInput, parseMoney } from '../utils/numberFormat'
+import { localDateInputValue } from '../utils/dateFormat'
 import ThemeToggle from './components/ThemeToggle'
 
 const initialForm = {
@@ -19,7 +20,7 @@ const initialForm = {
   descripcion: '',
   categoriaId: '',
   categoria: '',
-  fecha: new Date().toISOString().slice(0, 10),
+  fecha: localDateInputValue(),
 }
 
 function App() {
