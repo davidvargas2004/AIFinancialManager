@@ -23,17 +23,15 @@ const initialForm = {
 
 function App() {
   const { usuario: user, logout } = useAuthUsuario()
-  const { movimientos, resumen, loading, error, agregarMovimiento, eliminarMovimiento, recargar } = useMovimientos()
+  const [filter, setFilter] = useState('todos')
+  const { movimientos, resumen, pagination, loading, error, agregarMovimiento, eliminarMovimiento, recargar } = useMovimientos({
+    tipo: filter === 'todos' ? '' : filter,
+  })
   const { resumen: resumenAhorros } = useMetasAhorro()
   const { resumen: resumenInversiones } = useInversiones()
   const { categorias, loading: loadingCategorias, error: categoriasError } = useCategorias()
   const [form, setForm] = useState(initialForm)
-  const [filter, setFilter] = useState('todos')
   const [categoryType, setCategoryType] = useState(form.tipo)
-
-  const visibleMovimientos = filter === 'todos'
-    ? movimientos
-    : movimientos.filter(({ tipo }) => tipo === filter)
   const dineroSinDestino = Math.max(
     resumen.balance - resumenAhorros.aportado - resumenInversiones.invertido,
     0,
@@ -148,12 +146,25 @@ function App() {
         <div className="history-panel">
           <div className="section-heading">
             <div><p className="eyebrow">HISTORIAL</p><h2>Últimos movimientos</h2></div>
-            <span className="movement-count">{visibleMovimientos.length}</span>
+            <span className="movement-count">{pagination.total}</span>
           </div>
           <div className="filter-tabs">
-            {['todos', 'ingreso', 'gasto'].map((item) => <button key={item} className={filter === item ? 'active' : ''} type="button" onClick={() => setFilter(item)}>{item === 'todos' ? 'Todos' : `${item[0].toUpperCase()}${item.slice(1)}s`}</button>)}
+            {['todos', 'ingreso', 'gasto'].map((item) => <button key={item} className={filter === item ? 'active' : ''} type="button" onClick={() => {
+              setFilter(item)
+            }}>{item === 'todos' ? 'Todos' : `${item[0].toUpperCase()}${item.slice(1)}s`}</button>)}
           </div>
-          <MovementList movimientos={visibleMovimientos} onDelete={eliminarMovimiento} />
+          <MovementList movimientos={movimientos} onDelete={eliminarMovimiento} />
+          {pagination.totalPages > 1 && (
+            <div className="pagination-controls" aria-label="Paginación del historial">
+              <button className="pagination-button" type="button" onClick={() => recargar(pagination.page - 1)} disabled={!pagination.hasPrevious} aria-label="Ir a la página anterior">
+                <span aria-hidden="true">←</span> Anterior
+              </button>
+              <span className="pagination-status">Página <strong>{pagination.page}</strong> de <strong>{pagination.totalPages}</strong></span>
+              <button className="pagination-button" type="button" onClick={() => recargar(pagination.page + 1)} disabled={!pagination.hasNext} aria-label="Ir a la página siguiente">
+                Siguiente <span aria-hidden="true">→</span>
+              </button>
+            </div>
+          )}
         </div>
       </section>
 

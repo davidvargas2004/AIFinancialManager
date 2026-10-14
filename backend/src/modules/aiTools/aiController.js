@@ -11,7 +11,7 @@ async function preguntar(req, res, next) {
     const respuesta = await service.generarRespuesta(
       req.usuarioId,
       validacion.pregunta,
-      { confirmarOperacion: req.body?.confirmarOperacion || null },
+      { confirmationToken: req.body?.confirmationToken || null },
     );
     return res.json({
       respuesta: typeof respuesta === "string"

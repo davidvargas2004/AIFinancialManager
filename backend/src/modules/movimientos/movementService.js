@@ -1,3 +1,4 @@
+const prisma = require("../../config/prisma");
 const ingresoService = require("../ingresos/ingreso.service");
 const gastoService = require("../gastos/gasto.service");
 
@@ -52,22 +53,60 @@ function buildDateFilter({ desde, hasta } = {}) {
 async function listarMovimientos(usuarioId, filters = {}) {
   const dateFilter = buildDateFilter(filters);
   const tipos = filters.tipo ? [filters.tipo] : ["ingreso", "gasto"];
+  const page = Math.max(Number.parseInt(filters.page, 10) || 1, 1);
+  const pageSize = Math.min(Math.max(Number.parseInt(filters.pageSize, 10) || 5, 1), 5);
+  const skip = (page - 1) * pageSize;
 
   tipos.forEach(getService);
 
-  const movimientos = await Promise.all(
-    tipos.map(async (tipo) => {
-      const service = getService(tipo);
-      const items = service.listarIngresos
-        ? await service.listarIngresos(usuarioId, dateFilter)
-        : await service.listar(usuarioId, dateFilter);
+  const [resultados, totales] = await Promise.all([
+    Promise.all(tipos.map(async (tipo) => {
+      const items = await prisma[tipo].findMany({
+        where: { usuarioId, ...dateFilter },
+        orderBy: [{ ocurridoEn: "desc" }, { id: "desc" }],
+        take: skip + pageSize,
+        include: { categoria: true },
+      });
       return items.map((item) => normalizeMovement(item, tipo));
-    }),
-  );
+    })),
+    Promise.all(tipos.map(async (tipo) => {
+      const model = prisma[tipo];
+      const where = { usuarioId, ...dateFilter };
+      const [cantidad, agregado] = await Promise.all([
+        model.count({ where }),
+        model.aggregate({ where, _sum: { monto: true } }),
+      ]);
+      return {
+        tipo,
+        cantidad,
+        total: Number(agregado._sum.monto || 0),
+      };
+    })),
+  ]);
 
-  return movimientos
+  const movimientos = resultados
     .flat()
-    .sort((a, b) => new Date(b.ocurridoEn) - new Date(a.ocurridoEn));
+    .sort((a, b) => new Date(b.ocurridoEn) - new Date(a.ocurridoEn))
+    .slice(skip, skip + pageSize);
+  const total = totales.reduce((sum, item) => sum + item.cantidad, 0);
+  const resumen = totales.reduce((result, item) => {
+    result[item.tipo === "ingreso" ? "ingresos" : "gastos"] = item.total;
+    return result;
+  }, { ingresos: 0, gastos: 0 });
+
+  return {
+    items: movimientos,
+    page,
+    pageSize,
+    total,
+    totalPages: Math.ceil(total / pageSize),
+    hasNext: page < Math.ceil(total / pageSize),
+    hasPrevious: page > 1,
+    resumen: {
+      ...resumen,
+      balance: resumen.ingresos - resumen.gastos,
+    },
+  };
 }
 
 async function obtenerMovimiento(id, usuarioId, tipo) {

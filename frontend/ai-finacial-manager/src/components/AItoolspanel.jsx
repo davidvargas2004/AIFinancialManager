@@ -20,7 +20,11 @@ function AItoolspanel({ onMovementRegistered }) {
     const response = await preguntar(value);
     setOperacionPendiente(null);
     if (response?.registro?.estado === "pendiente" && response.registro.tipo) {
-      setOperacionPendiente({ pregunta: value, operacion: response.registro });
+      setOperacionPendiente({
+        pregunta: value,
+        operacion: response.registro,
+        confirmationToken: response.registro.confirmationToken,
+      });
     } else if (response?.registro?.estado === "registrado") {
       setOperacionPendiente(null);
     }
@@ -33,7 +37,7 @@ function AItoolspanel({ onMovementRegistered }) {
   async function confirmarOperacion() {
     if (!operacionPendiente || loading) return;
     const response = await preguntar(operacionPendiente.pregunta, {
-      confirmarOperacion: operacionPendiente.operacion,
+      confirmationToken: operacionPendiente.confirmationToken,
     });
     if (response?.registro?.estado === "registrado") {
       onMovementRegistered?.(normalizeAIMovement(response.registro));

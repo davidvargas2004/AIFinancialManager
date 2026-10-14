@@ -34,10 +34,11 @@ function createCrudService(modelName, fields, orderBy) {
   }
 
   return {
-    listar: (usuarioId, where = {}) =>
+    listar: (usuarioId, where = {}, pagination = {}) =>
       model.findMany({
         where: { usuarioId, ...where },
         orderBy,
+        ...pagination,
         ...(includeCategoria && { include: includeCategoria }),
       }),
 

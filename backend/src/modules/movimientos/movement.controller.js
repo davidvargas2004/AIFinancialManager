@@ -2,12 +2,14 @@ const movementService = require("./movementService");
 
 async function list(req, res, next) {
   try {
-    const movimientos = await movementService.listarMovimientos(req.usuarioId, {
+    const resultado = await movementService.listarMovimientos(req.usuarioId, {
       tipo: req.query.tipo,
       desde: req.query.desde,
       hasta: req.query.hasta,
+      page: req.query.page,
+      pageSize: req.query.pageSize,
     });
-    res.json(movimientos);
+    res.json(resultado);
   } catch (error) {
     next(error);
   }

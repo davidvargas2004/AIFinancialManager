@@ -1,6 +1,7 @@
 const prisma = require("../../config/prisma");
 const { consultarGemini, crearRespuestaFallback } = require("../../services/aiServices");
 const movementService = require("../movimientos/movementService");
+const { createPendingOperation, consumePendingOperation } = require("./pendingOperations");
 
 function serialize(value) {
   if (value instanceof Date) return value.toISOString();
@@ -178,7 +179,7 @@ async function registrarOperacion(usuarioId, respuesta, categorias) {
   };
 }
 
-async function generarRespuesta(usuarioId, pregunta, { confirmarOperacion = null } = {}) {
+async function generarRespuesta(usuarioId, pregunta, { confirmationToken = null } = {}) {
   const [usuario, categorias, ingresos, gastos, metasAhorro, aportesAhorro, inversiones] = await Promise.all([
     prisma.usuario.findUnique({
       where: { id: usuarioId },
@@ -230,19 +231,14 @@ async function generarRespuesta(usuarioId, pregunta, { confirmarOperacion = null
   });
 
   const operacionExplicita = extraerOperacionExplicita(pregunta, categorias);
-  if (confirmarOperacion) {
-    const operacionConfirmada = operacionExplicita || normalizarOperacionSugerida(confirmarOperacion, categorias);
-    const coincide = operacionConfirmada
-      && confirmarOperacion.tipo === operacionConfirmada.tipo
-      && Number(confirmarOperacion.monto) === operacionConfirmada.monto
-      && normalizarTexto(confirmarOperacion.categoria) === normalizarTexto(operacionConfirmada.categoria)
-      && normalizarTexto(confirmarOperacion.descripcion) === normalizarTexto(operacionConfirmada.descripcion);
-    if (!coincide) {
+  if (confirmationToken) {
+    const operacionConfirmada = consumePendingOperation(usuarioId, confirmationToken);
+    if (!operacionConfirmada) {
       return {
-        ...crearRespuestaFallback(pregunta, operacionExplicita || {
+        ...crearRespuestaFallback(pregunta, {
           tipo: "gasto", monto: 0, descripcion: "", categoria: "", registrar: false,
         }),
-        registro: { estado: "pendiente", mensaje: "La confirmación no coincide con una operación explícita válida." },
+        registro: { estado: "pendiente", mensaje: "La propuesta expiró, ya fue utilizada o no pertenece a este usuario." },
       };
     }
 
@@ -270,8 +266,10 @@ async function generarRespuesta(usuarioId, pregunta, { confirmarOperacion = null
   const operacionSugerida = operacionExplicita || normalizarOperacionSugerida(respuesta.operacion, categorias);
   if (operacionSugerida) {
     respuesta.operacion = operacionSugerida;
+    const confirmationToken = createPendingOperation(usuarioId, operacionSugerida);
     respuesta.registro = {
       estado: "pendiente",
+      confirmationToken,
       tipo: operacionSugerida.tipo,
       monto: operacionSugerida.monto,
       descripcion: operacionSugerida.descripcion,
@@ -282,4 +280,9 @@ async function generarRespuesta(usuarioId, pregunta, { confirmarOperacion = null
   return respuesta;
 }
 
-module.exports = { generarRespuesta, extraerOperacionExplicita, normalizarOperacionSugerida };
+module.exports = {
+  generarRespuesta,
+  extraerOperacionExplicita,
+  normalizarOperacionSugerida,
+  registrarOperacion,
+};

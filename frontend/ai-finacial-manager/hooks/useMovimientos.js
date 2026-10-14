@@ -14,46 +14,67 @@ function normalizeMovement(item, tipo) {
   }
 }
 
-export default function useMovimientos() {
+export default function useMovimientos({ tipo = '' } = {}) {
   const { token } = useAuthUsuario()
   const [movimientos, setMovimientos] = useState([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 5, total: 0, totalPages: 0, hasNext: false, hasPrevious: false })
+  const [resumenRemoto, setResumenRemoto] = useState({ ingresos: 0, gastos: 0, balance: 0 })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const recargar = useCallback(async () => {
+  const fetchPage = useCallback(async (page, signal) => {
     if (!token) return
-
-    try {
-      const response = await fetch(`${API_URL}/api/movimientos`, {
-        headers: { Authorization: `Bearer ${token}`, 'x-api-key': API_KEY },
-      })
-      if (!response.ok) throw new Error('No fue posible cargar tus movimientos')
-      const items = await response.json()
-      setMovimientos(items.map((item) => normalizeMovement(item, item.tipo)))
-    } catch (requestError) {
-      setError(requestError.message)
+    const params = new URLSearchParams({ page: String(page), pageSize: '5' })
+    if (tipo) params.set('tipo', tipo)
+    const response = await fetch(`${API_URL}/api/movimientos?${params}`, {
+      signal,
+      headers: { Authorization: `Bearer ${token}`, 'x-api-key': API_KEY },
+    })
+    if (!response.ok) throw new Error('No fue posible cargar tus movimientos')
+    const data = await response.json()
+    if (!data || !Array.isArray(data.items)) {
+      throw new Error('La respuesta del historial no tiene un formato válido')
     }
-  }, [token])
+    setMovimientos(data.items.map((item) => normalizeMovement(item, item.tipo)))
+    setPagination({
+      page: Number(data.page) || page,
+      pageSize: Number(data.pageSize) || 5,
+      total: Number(data.total) || 0,
+      totalPages: Number(data.totalPages) || 0,
+      hasNext: Boolean(data.hasNext),
+      hasPrevious: Boolean(data.hasPrevious),
+    })
+    setResumenRemoto(data.resumen || { ingresos: 0, gastos: 0, balance: 0 })
+  }, [tipo, token])
 
   useEffect(() => {
     if (!token) return
-
-    fetch(`${API_URL}/api/movimientos`, {
-      headers: { Authorization: `Bearer ${token}`, 'x-api-key': API_KEY },
-    })
-      .then((response) => {
-        if (!response.ok) throw new Error('No fue posible cargar tus movimientos')
-        return response.json()
+    setError('')
+    const controller = new AbortController()
+    setLoading(true)
+    fetchPage(currentPage, controller.signal)
+      .catch((requestError) => {
+        if (requestError.name !== 'AbortError') setError(requestError.message)
       })
-      .then((items) => setMovimientos(items.map((item) => normalizeMovement(item, item.tipo))))
-      .catch((requestError) => setError(requestError.message))
-  }, [token])
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false)
+      })
+    return () => controller.abort()
+  }, [currentPage, fetchPage, token])
 
-  const request = useCallback(async (tipo, options = {}) => {
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [tipo])
+
+  const recargar = useCallback((page = currentPage) => {
+    setCurrentPage(Math.max(page, 1))
+  }, [currentPage])
+
+  const request = useCallback(async (tipoMovimiento, options = {}) => {
     if (!token) return null
-
     const response = await fetch(
-      `${API_URL}/api/${tipo === 'ingreso' ? 'ingresos' : 'gastos'}${options.id ? `/${options.id}` : ''}`,
+      `${API_URL}/api/${tipoMovimiento === 'ingreso' ? 'ingresos' : 'gastos'}${options.id ? `/${options.id}` : ''}`,
       {
         method: options.method || 'GET',
         headers: {
@@ -64,30 +85,18 @@ export default function useMovimientos() {
         body: options.body ? JSON.stringify(options.body) : undefined,
       },
     )
-
     if (!response.ok) {
       const data = await response.json().catch(() => ({}))
       throw new Error(data.message || data.error || 'No fue posible sincronizar el movimiento')
     }
-
     return response.status === 204 ? null : response.json()
   }, [token])
 
   const agregarMovimiento = useCallback(async (form) => {
-    const movement = {
-      id: crypto.randomUUID(),
-      tipo: form.tipo,
-      monto: Number(form.monto),
-      descripcion: form.descripcion.trim(),
-      categoria: form.categoria,
-      categoriaId: form.categoriaId,
-      fecha: form.fecha,
-    }
-
     setError('')
     setLoading(true)
     try {
-      const remote = await request(form.tipo, {
+      await request(form.tipo, {
         method: 'POST',
         body: {
           tipo: form.tipo,
@@ -97,7 +106,7 @@ export default function useMovimientos() {
           ocurridoEn: form.fecha,
         },
       })
-      setMovimientos((current) => [normalizeMovement(remote || movement, form.tipo), ...current])
+      setCurrentPage(1)
     } catch (requestError) {
       setError(requestError.message)
     } finally {
@@ -109,17 +118,13 @@ export default function useMovimientos() {
     setError('')
     try {
       await request(movement.tipo, { method: 'DELETE', id: movement.id })
-      setMovimientos((current) => current.filter((item) => item.id !== movement.id))
+      setCurrentPage((page) => Math.max(page, 1))
     } catch (requestError) {
       setError(requestError.message)
     }
   }, [request])
 
-  const resumen = useMemo(() => {
-    const ingresos = movimientos.filter(({ tipo }) => tipo === 'ingreso').reduce((total, { monto }) => total + monto, 0)
-    const gastos = movimientos.filter(({ tipo }) => tipo === 'gasto').reduce((total, { monto }) => total + monto, 0)
-    return { ingresos, gastos, balance: ingresos - gastos }
-  }, [movimientos])
+  const resumen = useMemo(() => resumenRemoto, [resumenRemoto])
 
-  return { movimientos, resumen, loading, error, agregarMovimiento, eliminarMovimiento, recargar }
+  return { movimientos, resumen, pagination, loading, error, agregarMovimiento, eliminarMovimiento, recargar }
 }
