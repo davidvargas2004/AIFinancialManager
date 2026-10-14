@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import useAuthUsuario from './useAuthUsuario'
 
 const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '').replace(/\/api$/, '')
-const API_KEY = import.meta.env.VITE_API_KEY || ''
 
 async function request(endpoint, token, options = {}) {
   const response = await fetch(`${API_URL}${endpoint}`, {
@@ -10,7 +9,6 @@ async function request(endpoint, token, options = {}) {
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
-      'x-api-key': API_KEY,
       ...(options.headers || {}),
     },
   })

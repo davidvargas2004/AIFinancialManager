@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import useAuthUsuario from './useAuthUsuario'
 
 const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '').replace(/\/api$/, '')
-const API_KEY = import.meta.env.VITE_API_KEY || ''
 
 function normalizeMovement(item, tipo) {
   return {
@@ -29,7 +28,7 @@ export default function useMovimientos({ tipo = '' } = {}) {
     if (tipo) params.set('tipo', tipo)
     const response = await fetch(`${API_URL}/api/movimientos?${params}`, {
       signal,
-      headers: { Authorization: `Bearer ${token}`, 'x-api-key': API_KEY },
+      headers: { Authorization: `Bearer ${token}` },
     })
     if (!response.ok) throw new Error('No fue posible cargar tus movimientos')
     const data = await response.json()
@@ -80,7 +79,6 @@ export default function useMovimientos({ tipo = '' } = {}) {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
-          'x-api-key': API_KEY,
         },
         body: options.body ? JSON.stringify(options.body) : undefined,
       },

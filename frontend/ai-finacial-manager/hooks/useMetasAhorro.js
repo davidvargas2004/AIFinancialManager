@@ -2,13 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import useAuthUsuario from './useAuthUsuario'
 
 const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '').replace(/\/api$/, '')
-const API_KEY = import.meta.env.VITE_API_KEY || ''
 
 function headers(token) {
   return {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
-    'x-api-key': API_KEY,
   }
 }
 

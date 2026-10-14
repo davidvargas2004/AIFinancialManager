@@ -41,5 +41,10 @@ Deja `VITE_API_URL` vacío para que el frontend use el mismo dominio:
 
 ```env
 VITE_API_URL=
-VITE_API_KEY=la-misma-clave-configurada-en-API_KEY
+```
+
+Puedes comprobar que la función serverless responde visitando `/api/health`. Esa ruta no requiere `x-api-key` y debe devolver:
+
+```json
+{"ok":true,"service":"ai-financial-manager-api"}
 ```

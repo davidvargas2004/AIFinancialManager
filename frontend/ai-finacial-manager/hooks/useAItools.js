@@ -2,7 +2,6 @@ import { useCallback, useState } from 'react'
 import useAuthUsuario from './useAuthUsuario'
 
 const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '').replace(/\/api$/, '')
-const API_KEY = import.meta.env.VITE_API_KEY || ''
 
 function parseResponse(value) {
   if (value && typeof value === 'object' && !Array.isArray(value)) return value
@@ -49,7 +48,6 @@ export default function useAItools() {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
-          'x-api-key': API_KEY,
         },
         body: JSON.stringify({ pregunta, ...options }),
       })

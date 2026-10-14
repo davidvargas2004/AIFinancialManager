@@ -1,7 +1,6 @@
 const express = require("express");
 const cors = require("cors");
 const errorMiddleware = require("./middlewares/error.middleware");
-const requireApiKey = require("./middlewares/api-key.middleware");
 const requireUser = require("./middlewares/auth.middleware");
 const ingresoRoutes = require("./modules/ingresos/ingreso.routes");
 const categoriaRoutes = require("./modules/categorias/categoria.routes");
@@ -21,7 +20,10 @@ app.get("/", (req, res) => {
   res.json({ message: "API de AI Financial Manager funcionando estoy listo para trabajar" });
 });
 
-app.use("/api", requireApiKey);
+app.get("/api/health", (req, res) => {
+  res.json({ ok: true, service: "ai-financial-manager-api" });
+});
+
 app.use("/api/categorias", requireUser, categoriaRoutes);
 app.use("/api/ingresos", requireUser, ingresoRoutes);
 app.use("/api/gastos", requireUser, gastoRoutes);
