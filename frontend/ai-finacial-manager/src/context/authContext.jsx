@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import AuthContext from './authContextValue'
 
-const API_URL = import.meta.env.VITE_API_URL || ''
+const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '').replace(/\/api$/, '')
 const API_KEY = import.meta.env.VITE_API_KEY || ''
 const TOKEN_KEY = 'supabase_access_token'
 const USER_KEY = 'finance_user'

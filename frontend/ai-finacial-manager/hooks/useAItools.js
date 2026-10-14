@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import useAuthUsuario from './useAuthUsuario'
 
-const API_URL = import.meta.env.VITE_API_URL || ''
+const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '').replace(/\/api$/, '')
 const API_KEY = import.meta.env.VITE_API_KEY || ''
 
 function parseResponse(value) {
