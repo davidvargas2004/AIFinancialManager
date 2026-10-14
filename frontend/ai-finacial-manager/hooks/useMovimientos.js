@@ -19,6 +19,7 @@ export default function useMovimientos({ tipo = '' } = {}) {
   const [currentPage, setCurrentPage] = useState(1)
   const [pagination, setPagination] = useState({ page: 1, pageSize: 5, total: 0, totalPages: 0, hasNext: false, hasPrevious: false })
   const [resumenRemoto, setResumenRemoto] = useState({ ingresos: 0, gastos: 0, balance: 0 })
+  const [refreshKey, setRefreshKey] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -60,10 +61,11 @@ export default function useMovimientos({ tipo = '' } = {}) {
         if (!controller.signal.aborted) setLoading(false)
       })
     return () => controller.abort()
-  }, [currentPage, fetchPage, token])
+  }, [currentPage, fetchPage, refreshKey, token])
 
   useEffect(() => {
     setCurrentPage(1)
+    setRefreshKey((key) => key + 1)
   }, [tipo])
 
   const recargar = useCallback((page = currentPage) => {
@@ -117,6 +119,7 @@ export default function useMovimientos({ tipo = '' } = {}) {
     try {
       await request(movement.tipo, { method: 'DELETE', id: movement.id })
       setCurrentPage((page) => Math.max(page, 1))
+      setRefreshKey((key) => key + 1)
     } catch (requestError) {
       setError(requestError.message)
     }

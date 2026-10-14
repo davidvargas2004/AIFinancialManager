@@ -12,6 +12,7 @@ import useMetasAhorro from '../hooks/useMetasAhorro'
 import useInversiones from '../hooks/useInversiones'
 import { formatMoneyInput, parseMoney } from '../utils/numberFormat'
 import { localDateInputValue } from '../utils/dateFormat'
+import { calculateBalance } from '../utils/balance'
 import ThemeToggle from './components/ThemeToggle'
 
 const initialForm = {
@@ -34,11 +35,13 @@ function App() {
   const { categorias, loading: loadingCategorias, error: categoriasError } = useCategorias()
   const [form, setForm] = useState(initialForm)
   const [categoryType, setCategoryType] = useState(form.tipo)
-  const dineroSinDestino = Math.max(
-    resumen.balance - resumenAhorros.aportado - resumenInversiones.invertido,
-    0,
-  )
-  const saldoTotal = dineroSinDestino + resumenAhorros.aportado + resumenInversiones.valorActual
+  const { dineroSinDestino, saldoTotal } = calculateBalance({
+    ingresos: resumen.ingresos,
+    gastos: resumen.gastos,
+    ahorros: resumenAhorros.aportado,
+    inversiones: resumenInversiones.invertido,
+    valorInversiones: resumenInversiones.valorActual,
+  })
 
   function updateForm(event) {
     const { name, value } = event.target
